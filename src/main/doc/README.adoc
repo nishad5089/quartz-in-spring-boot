@@ -1,0 +1,129 @@
+
+== Quartz Enterprise Job Scheduler
+:stylesheet: dark.css
+
+ What is the Quartz Job Scheduling Library?
+
+Quartz is a richly featured, open source job scheduling library that can be integrated within virtually any Java application - from the smallest stand-alone application to
+the largest e-commerce system. Quartz can be used to create
+simple or complex schedules for executing tens, hundreds, or even
+tens-of-thousands of jobs; jobs whose tasks are defined as standard Java
+components that may execute virtually anything you may program them to do.
+The Quartz Scheduler includes many enterprise-class features, such as
+support for JTA transactions and clustering.
+
+// What Can Quartz Do For You?
+//
+//If your application has tasks that need to occur at given moments in time, or if your system has recurring maintenance jobs then Quartz may be your ideal solution.
+//
+//Sample uses of job scheduling with Quartz:
+//
+//* Driving Process Workflow: As a new order is initially placed, schedule a Job to fire in exactly 2 hours, that will check the status of that order, and trigger a warning notification if an order confirmation message has not yet been received for the order, as well as changing the order’s status to 'awaiting intervention'.
+//
+//* System Maintenance: Schedule a job to dump the contents of a database into an XML file every business day (all weekdays except holidays) at 11:30 PM.
+//
+//* Providing reminder services within an application.
+
+=== Features
+*Runtime Environments*
+
+* Quartz can run embedded within another free standing application
+
+* Quartz can be instantiated within an application server (or servlet container), and participate in XA transactions
+
+* Quartz can run as a stand-alone program (within its own Java Virtual Machine), to be used via RMI
+
+* Quartz can be instantiated as a cluster of stand-alone programs (with load-balance and fail-over capabilities) for the execution of jobs
+
+
+=== Job Scheduling
+Jobs are scheduled to run when a given Trigger occurs. Triggers can be created with nearly any combination of the following directives:
+
+
+
+= Java Training - Beginner
+
+[NOTE]
+--
+This repository only contains *Java Training - Beginner* classes example code.
+
+Other relevant training materials is available at https://github.com/xomidar/java-training[Java Training] repository and http://training.rezaulhasan.me[Training Website].
+--
+
+== Class wise code details
+
+[WARNING]
+All classes example code is available in respective class wise git branch.
+Please switch to respective class branch to see details code.
+Commit message will give the hint of code progress.
+
+Details curriculum is available at http://training.rezaulhasan.me[Java Beginner Curriculum]
+
+
+//
+//* xref:classes/class-1.adoc[Class 1 - Java Basic].
+//Code branch name `1-java-basic`
+
+//
+//
+//= IntelliJ IDEA
+//:description: Introduction to IDE - IntelliJ IDEA. \
+//Most used keymaps | Useful Plugins
+//:keywords: java, oop, programming, ide, intellij
+//:experimental:
+//
+//[abstract]
+//IntelliJ IDEA is one of the most popular IDE among java developers.
+//Ultimate and Community both editions are available for IntelliJ IDEA.
+//In this article developers will find some useful plugins to boost their development experience as well as most used keymaps to keep their hands mostly on the keyboard.
+//
+//== Useful IntelliJ IDEA Plugins
+//
+//- To generate boilerplate code (e.g. Getter, Setter and so on) during compile time
+//https://plugins.jetbrains.com/plugin/6317-lombok[Lombok, window=_blank] plugin is the best choice for the developers.
+//It is very easy to use due to its annotation based code generation.
+//- https://plugins.jetbrains.com/plugin/7391-asciidoc[AsciiDoc, window=_blank] plugin brings Asciidoc supports for the developer.
+//It helps to write the technical documentation easily on the same IDE they have used for the development.
+//- https://plugins.jetbrains.com/plugin/11058-extra-icons[Extra Icons, window=_blank] plugin helps to visually recognize different file formats almost instantly by their icons.
+//- If you are struggling to find opening and closing brackets in your code, https://plugins.jetbrains.com/plugin/10080-rainbow-brackets[Rainbow Brackets, window=_blank] plugin may help you.
+//It helps developers to find brackets through rainbow coloring.
+//- https://plugins.jetbrains.com/plugin/7275-codeglance[CodeGlance, window=_blank] plugin is a code mini map.
+//It helps to navigate fast across the editor window.
+//
+//== Keymaps
+//
+//[TIP]
+//====
+//.Keymap learning and presentation plugins for IntelliJ IDEA
+//- https://plugins.jetbrains.com/plugin/9792-key-promoter-x/versions[Key Promoter X] plugin shows a popup notification with the corresponding keyboard shortcut whenever a command executed using the mouse.
+//It also shows most used keymap statistics.
+//
+//- https://plugins.jetbrains.com/plugin/7345-presentation-assistant[Presentation Assistant] plugin shows a popup with the corresponding description whenever a keymap pressed.
+//It can be very useful during presentation, screencast.
+//
+//Both plugin can be used together for learning shortcuts.
+//====
+//
+//[NOTE]
+//====
+//https://resources.jetbrains.com/storage/products/intellij-idea/docs/IntelliJIDEA_ReferenceCard.pdf[Download] the default keymap reference card by *Jetbrains*.
+//This keymap card is also available inside your IDE under menu:Help[Keymap Reference].
+//====
+//
+//include::beginner:page$introduction-to-ide/intellij-idea-keymap.adoc[]
+//
+//== Additional Resources
+//
+//=== Watch
+//
+//* Pluralsight - https://app.pluralsight.com/library/courses/intellij-ce-getting-started/[Getting Started with IntelliJ CE, window="_blank"] by David Starr.
+//** Duration *2h 47m*.
+//** Released *1 Sep 2017*.
+//
+//=== Read
+//
+//* https://www.jetbrains.com/help/idea/getting-started.html[IntelliJ IDEA Getting started, window="_blank"]
+//* https://www.jetbrains.com/help/idea/mastering-keyboard-shortcuts.html[IntelliJ IDEA keyboard shortcuts﻿, window="_blank"]
+//
+//
+//
