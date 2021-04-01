@@ -2,11 +2,14 @@ package com.quartzadvance.service;
 
 import com.quartzadvance.entity.SchedulerJobInfo;
 
+import java.util.List;
+
 /**
  * @author Abdur Rahim Nishad
  * @since 2021/31/03
  */
 public interface SchedulerService {
+//    List<SchedulerJobInfo> getAllRunningJobs();
     /**
      * It start All the job schedulers that in the database.
      */
@@ -70,4 +73,6 @@ public interface SchedulerService {
      * Shutdown JobStore
      */
     void shutdownScheduler();
+
+
 }

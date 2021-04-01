@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * @author Abdur Rahim Nishad
  * @since 2021/31/03
@@ -76,4 +78,9 @@ public class QuartzController {
     public void destroy() {
         schedulerService.shutdownScheduler();
     }
+
+//    @GetMapping("runningjobs")
+//    public List<SchedulerJobInfo> runningAllJobs(){
+//        return schedulerService.getAllRunningJobs();
+//    }
 }

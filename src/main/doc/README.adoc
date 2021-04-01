@@ -35,95 +35,129 @@ support for JTA transactions and clustering.
 
 * Quartz can be instantiated as a cluster of stand-alone programs (with load-balance and fail-over capabilities) for the execution of jobs
 
+=== Create Quartz Job.
+* *@param* jobClass  Class whose executeInternal() method needs to be called.
+* *@param* isDurable Job needs to be persisted even after completion. if true, job will be persisted, not otherwise.
+* *@param* jobName   Job name.
+* *@param* jobGroup  Job group.
+* *@return* JobDetail object
 
-=== Job Scheduling
-Jobs are scheduled to run when a given Trigger occurs. Triggers can be created with nearly any combination of the following directives:
+    public JobDetail createJob(Class<? extends QuartzJobBean> jobClass, boolean isDurable, String jobName, String jobGroup) {
+        JobDetailFactoryBean factoryBean = new JobDetailFactoryBean();
+        factoryBean.setJobClass(jobClass);
+        factoryBean.setDurability(isDurable);
+        factoryBean.setName(jobName);
+        factoryBean.setGroup(jobGroup);
+        JobDataMap jobDataMap = new JobDataMap();
+        jobDataMap.put(jobName + jobGroup, jobClass.getName());
+        factoryBean.setJobDataMap(jobDataMap);
+        factoryBean.afterPropertiesSet();
+        return factoryBean.getObject();
+    }
+
+=== Create cron trigger
+
+ * *@param* triggerName        Trigger name.
+ * *@param* startTime          Trigger start time.
+ * *@param* cronExpression     Cron expression.
+ * *@param* misFireInstruction Misfire instruction (what to do in case of misfire happens).
+ * *@return* {@link CronTrigger}
+
+    public CronTrigger createCronTrigger(String triggerName, Date startTime, String cronExpression, int misFireInstruction) {
+        CronTriggerFactoryBean factoryBean = new CronTriggerFactoryBean();
+        factoryBean.setName(triggerName);
+        factoryBean.setStartTime(startTime);
+        factoryBean.setCronExpression(cronExpression);
+        factoryBean.setMisfireInstruction(misFireInstruction);
+        try {
+            factoryBean.afterPropertiesSet();
+        } catch (ParseException e) {
+            log.error(e.getMessage(), e);
+        }
+        return factoryBean.getObject();
+    }
+
+=== Create simple trigger.
+
+ * *@param* triggerName        Trigger name.
+ * *@param* startTime          Trigger start time.
+ * *@param* repeatTime         Job repeat period mills
+ * *@param* misFireInstruction Misfire instruction (what to do in case of misfire happens).
+ * *@return* {@link SimpleTrigger}
+
+   public SimpleTrigger createSimpleTrigger(String triggerName, Date startTime, Long repeatTime, int misFireInstruction) {
+        SimpleTriggerFactoryBean factoryBean = new SimpleTriggerFactoryBean();
+        factoryBean.setName(triggerName);
+        factoryBean.setStartTime(startTime);
+        factoryBean.setRepeatInterval(repeatTime);
+        factoryBean.setRepeatCount(SimpleTrigger.REPEAT_INDEFINITELY);
+        factoryBean.setMisfireInstruction(misFireInstruction);
+        factoryBean.afterPropertiesSet();
+        return factoryBean.getObject();
+    }
+
+=== Available Method to call
+
+     * It start All the job schedulers that in the database.
+
+    void startAllSchedulers();
 
 
+     * It Create New Job And Switch JobStore to persistence table
 
-= Java Training - Beginner
+     * *@param* jobInfo JobInformation(Ex: timingInfo, JobName etc)
 
-[NOTE]
---
-This repository only contains *Java Training - Beginner* classes example code.
-
-Other relevant training materials is available at https://github.com/xomidar/java-training[Java Training] repository and http://training.rezaulhasan.me[Training Website].
---
-
-== Class wise code details
-
-[WARNING]
-All classes example code is available in respective class wise git branch.
-Please switch to respective class branch to see details code.
-Commit message will give the hint of code progress.
-
-Details curriculum is available at http://training.rezaulhasan.me[Java Beginner Curriculum]
+    void scheduleNewJob(SchedulerJobInfo jobInfo);
 
 
-//
-//* xref:classes/class-1.adoc[Class 1 - Java Basic].
-//Code branch name `1-java-basic`
+     * It Update the job information and reschedule the information into JobStore
 
-//
-//
-//= IntelliJ IDEA
-//:description: Introduction to IDE - IntelliJ IDEA. \
-//Most used keymaps | Useful Plugins
-//:keywords: java, oop, programming, ide, intellij
-//:experimental:
-//
-//[abstract]
-//IntelliJ IDEA is one of the most popular IDE among java developers.
-//Ultimate and Community both editions are available for IntelliJ IDEA.
-//In this article developers will find some useful plugins to boost their development experience as well as most used keymaps to keep their hands mostly on the keyboard.
-//
-//== Useful IntelliJ IDEA Plugins
-//
-//- To generate boilerplate code (e.g. Getter, Setter and so on) during compile time
-//https://plugins.jetbrains.com/plugin/6317-lombok[Lombok, window=_blank] plugin is the best choice for the developers.
-//It is very easy to use due to its annotation based code generation.
-//- https://plugins.jetbrains.com/plugin/7391-asciidoc[AsciiDoc, window=_blank] plugin brings Asciidoc supports for the developer.
-//It helps to write the technical documentation easily on the same IDE they have used for the development.
-//- https://plugins.jetbrains.com/plugin/11058-extra-icons[Extra Icons, window=_blank] plugin helps to visually recognize different file formats almost instantly by their icons.
-//- If you are struggling to find opening and closing brackets in your code, https://plugins.jetbrains.com/plugin/10080-rainbow-brackets[Rainbow Brackets, window=_blank] plugin may help you.
-//It helps developers to find brackets through rainbow coloring.
-//- https://plugins.jetbrains.com/plugin/7275-codeglance[CodeGlance, window=_blank] plugin is a code mini map.
-//It helps to navigate fast across the editor window.
-//
-//== Keymaps
-//
-//[TIP]
-//====
-//.Keymap learning and presentation plugins for IntelliJ IDEA
-//- https://plugins.jetbrains.com/plugin/9792-key-promoter-x/versions[Key Promoter X] plugin shows a popup notification with the corresponding keyboard shortcut whenever a command executed using the mouse.
-//It also shows most used keymap statistics.
-//
-//- https://plugins.jetbrains.com/plugin/7345-presentation-assistant[Presentation Assistant] plugin shows a popup with the corresponding description whenever a keymap pressed.
-//It can be very useful during presentation, screencast.
-//
-//Both plugin can be used together for learning shortcuts.
-//====
-//
-//[NOTE]
-//====
-//https://resources.jetbrains.com/storage/products/intellij-idea/docs/IntelliJIDEA_ReferenceCard.pdf[Download] the default keymap reference card by *Jetbrains*.
-//This keymap card is also available inside your IDE under menu:Help[Keymap Reference].
-//====
-//
-//include::beginner:page$introduction-to-ide/intellij-idea-keymap.adoc[]
-//
-//== Additional Resources
-//
-//=== Watch
-//
-//* Pluralsight - https://app.pluralsight.com/library/courses/intellij-ce-getting-started/[Getting Started with IntelliJ CE, window="_blank"] by David Starr.
-//** Duration *2h 47m*.
-//** Released *1 Sep 2017*.
-//
-//=== Read
-//
-//* https://www.jetbrains.com/help/idea/getting-started.html[IntelliJ IDEA Getting started, window="_blank"]
-//* https://www.jetbrains.com/help/idea/mastering-keyboard-shortcuts.html[IntelliJ IDEA keyboard shortcuts﻿, window="_blank"]
-//
-//
-//
+     * *@param* jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)
+
+    void updateScheduleJob(SchedulerJobInfo jobInfo);
+
+
+     * It takes JobName and removes the job from the JobStore
+
+     * *@param* jobName Name of the running job
+     * *@return* {@link boolean}
+
+    boolean unScheduleJob(String jobName);
+
+
+     * loops through all the triggers having a reference to this job, to un-schedule them
+
+     * *@param* jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)
+     * *@return* {@link boolean}
+
+    boolean deleteJob(SchedulerJobInfo jobInfo);
+
+
+     * It pause the currently running job.
+
+     * *@param* jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)
+     * *@return* {@link boolean}
+
+    boolean pauseJob(SchedulerJobInfo jobInfo);
+
+
+     * It resume the pausing jobs and job start running again
+
+     * *@param* jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)
+     * *@return* {@link boolean}
+
+    boolean resumeJob(SchedulerJobInfo jobInfo);
+
+
+     * if there is needed any Immediate call/hit of a particular job then method can be called
+
+     * *@param* jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)
+     * *@return* {@link boolean}
+
+    boolean startJobNow(SchedulerJobInfo jobInfo);
+
+
+     * Shutdown JobStore
+
+    void shutdownScheduler();
+
