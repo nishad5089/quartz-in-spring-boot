@@ -1,14 +1,12 @@
-package com.quartzadvance.service;
+package com.quartzadvance.utils;
 
+import com.quartzadvance.entity.SchedulerJobInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.CronTrigger;
 import org.quartz.JobDataMap;
 import org.quartz.JobDetail;
 import org.quartz.SimpleTrigger;
-import org.springframework.scheduling.quartz.CronTriggerFactoryBean;
-import org.springframework.scheduling.quartz.JobDetailFactoryBean;
-import org.springframework.scheduling.quartz.QuartzJobBean;
-import org.springframework.scheduling.quartz.SimpleTriggerFactoryBean;
+import org.springframework.scheduling.quartz.*;
 import org.springframework.stereotype.Component;
 
 import java.text.ParseException;
@@ -25,26 +23,22 @@ public class JobScheduleCreator {
     /**
      * Create Quartz Job.
      *
-     * @param jobClass  Class whose executeInternal() method needs to be called.
+     * @param SchedulerJobInfo it represents Job scheduling information.
      * @param isDurable Job needs to be persisted even after completion. if true, job will be persisted, not otherwise.
-     * @param jobName   Job name.
-     * @param jobGroup  Job group.
      * @return JobDetail object
      */
-    public JobDetail createJob(Class<? extends QuartzJobBean> jobClass, boolean isDurable, String jobName, String jobGroup) {
+    public JobDetail createJob(SchedulerJobInfo jobInfo, boolean isDurable) throws ClassNotFoundException {
         JobDetailFactoryBean factoryBean = new JobDetailFactoryBean();
-        factoryBean.setJobClass(jobClass);
+        factoryBean.setJobClass((Class<? extends QuartzJobBean>) jobInfo.getJobClass());
         factoryBean.setDurability(isDurable);
-        factoryBean.setName(jobName);
-        factoryBean.setGroup(jobGroup);
-
+        factoryBean.setName(jobInfo.getJobName());
+        factoryBean.setGroup(jobInfo.getJobGroup());
         // set job data map
         JobDataMap jobDataMap = new JobDataMap();
-        jobDataMap.put(jobName + jobGroup, jobClass.getName());
+        jobDataMap.put(jobInfo.getJobName(), jobInfo);
         factoryBean.setJobDataMap(jobDataMap);
 
         factoryBean.afterPropertiesSet();
-
         return factoryBean.getObject();
     }
 

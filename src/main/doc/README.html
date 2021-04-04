@@ -486,77 +486,81 @@ support for JTA transactions and clustering.</p>
 <div class="ulist">
 <ul>
 <li>
-<p><strong>@param</strong> jobClass  Class whose executeInternal() method needs to be called.</p>
+<p><code>@param</code> SchedulerJobInfo it represents Job scheduling information.</p>
 </li>
 <li>
-<p><strong>@param</strong> isDurable Job needs to be persisted even after completion. if true, job will be persisted, not otherwise.</p>
+<p><code>@param</code> isDurable Job needs to be persisted even after completion. if true, job will be persisted, not otherwise.</p>
 </li>
 <li>
-<p><strong>@param</strong> jobName   Job name.</p>
-</li>
-<li>
-<p><strong>@param</strong> jobGroup  Job group.</p>
-</li>
-<li>
-<p><strong>@return</strong> JobDetail object</p>
-<div class="literalblock">
-<div class="content">
-<pre>public JobDetail createJob(Class&lt;? extends QuartzJobBean&gt; jobClass, boolean isDurable, String jobName, String jobGroup) {
-    JobDetailFactoryBean factoryBean = new JobDetailFactoryBean();
-    factoryBean.setJobClass(jobClass);
-    factoryBean.setDurability(isDurable);
-    factoryBean.setName(jobName);
-    factoryBean.setGroup(jobGroup);
-    JobDataMap jobDataMap = new JobDataMap();
-    jobDataMap.put(jobName + jobGroup, jobClass.getName());
-    factoryBean.setJobDataMap(jobDataMap);
-    factoryBean.afterPropertiesSet();
-    return factoryBean.getObject();
-}</pre>
-</div>
-</div>
+<p><code>@return</code> JobDetail object</p>
 </li>
 </ul>
 </div>
+<details>
+<summary class="title">Click to see the code</summary>
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="java">    <span style="color:#088;font-weight:bold">public</span> JobDetail createJob(SchedulerJobInfo jobInfo, <span style="color:#339;font-weight:bold">boolean</span> isDurable) <span style="color:#088;font-weight:bold">throws</span> <span style="color:#C00;font-weight:bold">ClassNotFoundException</span> {
+        JobDetailFactoryBean factoryBean = <span style="color:#080;font-weight:bold">new</span> JobDetailFactoryBean();
+        factoryBean.setJobClass((<span style="color:#0a8;font-weight:bold">Class</span>&lt;? <span style="color:#088;font-weight:bold">extends</span> QuartzJobBean&gt;) jobInfo.getJobClass());
+        factoryBean.setDurability(isDurable);
+        factoryBean.setName(jobInfo.getJobName());
+        factoryBean.setGroup(jobInfo.getJobGroup());
+        JobDataMap jobDataMap = <span style="color:#080;font-weight:bold">new</span> JobDataMap();
+        jobDataMap.put(jobInfo.getJobName(), jobInfo);
+        factoryBean.setJobDataMap(jobDataMap);
+        factoryBean.afterPropertiesSet();
+        <span style="color:#080;font-weight:bold">return</span> factoryBean.getObject();
+    }</code></pre>
+</div>
+</div>
+</div>
+</details>
 </div>
 <div class="sect2">
 <h3 id="_create_cron_trigger">Create cron trigger</h3>
 <div class="ulist">
 <ul>
 <li>
-<p><strong>@param</strong> triggerName        Trigger name.</p>
+<p><code>@param</code> triggerName        Trigger name.</p>
 </li>
 <li>
-<p><strong>@param</strong> startTime          Trigger start time.</p>
+<p><code>@param</code> startTime          Trigger start time.</p>
 </li>
 <li>
-<p><strong>@param</strong> cronExpression     Cron expression.</p>
+<p><code>@param</code> cronExpression     Cron expression.</p>
 </li>
 <li>
-<p><strong>@param</strong> misFireInstruction Misfire instruction (what to do in case of misfire happens).</p>
+<p><code>@param</code> misFireInstruction Misfire instruction (what to do in case of misfire happens).</p>
 </li>
 <li>
-<p><strong>@return</strong> {@link CronTrigger}</p>
-<div class="literalblock">
-<div class="content">
-<pre>public CronTrigger createCronTrigger(String triggerName, Date startTime, String cronExpression, int misFireInstruction) {
-    CronTriggerFactoryBean factoryBean = new CronTriggerFactoryBean();
-    factoryBean.setName(triggerName);
-    factoryBean.setStartTime(startTime);
-    factoryBean.setCronExpression(cronExpression);
-    factoryBean.setMisfireInstruction(misFireInstruction);
-    try {
-        factoryBean.afterPropertiesSet();
-    } catch (ParseException e) {
-        log.error(e.getMessage(), e);
-    }
-    return factoryBean.getObject();
-}</pre>
-</div>
-</div>
+<p><code>@return</code> { @link CronTrigger }</p>
 </li>
 </ul>
 </div>
+<details>
+<summary class="title">Click to see the code</summary>
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="java">    <span style="color:#088;font-weight:bold">public</span> CronTrigger createCronTrigger(<span style="color:#0a8;font-weight:bold">String</span> triggerName, <span style="color:#0a8;font-weight:bold">Date</span> startTime, <span style="color:#0a8;font-weight:bold">String</span> cronExpression, <span style="color:#339;font-weight:bold">int</span> misFireInstruction) {
+        CronTriggerFactoryBean factoryBean = <span style="color:#080;font-weight:bold">new</span> CronTriggerFactoryBean();
+        factoryBean.setName(triggerName);
+        factoryBean.setStartTime(startTime);
+        factoryBean.setCronExpression(cronExpression);
+        factoryBean.setMisfireInstruction(misFireInstruction);
+        <span style="color:#080;font-weight:bold">try</span> {
+            factoryBean.afterPropertiesSet();
+        } <span style="color:#080;font-weight:bold">catch</span> (<span style="color:#C00;font-weight:bold">ParseException</span> e) {
+            log.error(e.getMessage(), e);
+        }
+        <span style="color:#080;font-weight:bold">return</span> factoryBean.getObject();
+    }</code></pre>
+</div>
+</div>
+</div>
+</details>
 </div>
 <div class="sect2">
 <h3 id="_create_simple_trigger">Create simple trigger.</h3>
@@ -576,133 +580,289 @@ support for JTA transactions and clustering.</p>
 </li>
 <li>
 <p><strong>@return</strong> {@link SimpleTrigger}</p>
-<div class="literalblock">
-<div class="content">
-<pre>public SimpleTrigger createSimpleTrigger(String triggerName, Date startTime, Long repeatTime, int misFireInstruction) {
-     SimpleTriggerFactoryBean factoryBean = new SimpleTriggerFactoryBean();
-     factoryBean.setName(triggerName);
-     factoryBean.setStartTime(startTime);
-     factoryBean.setRepeatInterval(repeatTime);
-     factoryBean.setRepeatCount(SimpleTrigger.REPEAT_INDEFINITELY);
-     factoryBean.setMisfireInstruction(misFireInstruction);
-     factoryBean.afterPropertiesSet();
-     return factoryBean.getObject();
- }</pre>
-</div>
-</div>
 </li>
 </ul>
 </div>
+<details>
+<summary class="title">Click to see the code</summary>
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="java">   <span style="color:#088;font-weight:bold">public</span> SimpleTrigger createSimpleTrigger(<span style="color:#0a8;font-weight:bold">String</span> triggerName, <span style="color:#0a8;font-weight:bold">Date</span> startTime, <span style="color:#0a8;font-weight:bold">Long</span> repeatTime, <span style="color:#339;font-weight:bold">int</span> misFireInstruction) {
+        SimpleTriggerFactoryBean factoryBean = <span style="color:#080;font-weight:bold">new</span> SimpleTriggerFactoryBean();
+        factoryBean.setName(triggerName);
+        factoryBean.setStartTime(startTime);
+        factoryBean.setRepeatInterval(repeatTime);
+        factoryBean.setRepeatCount(SimpleTrigger.REPEAT_INDEFINITELY);
+        factoryBean.setMisfireInstruction(misFireInstruction);
+        factoryBean.afterPropertiesSet();
+        <span style="color:#080;font-weight:bold">return</span> factoryBean.getObject();
+    }</code></pre>
+</div>
+</div>
+</div>
+</details>
 </div>
 <div class="sect2">
 <h3 id="_available_method_to_call">Available Method to call</h3>
-<div class="ulist">
-<ul>
+<div class="sect3">
+<h4 id="_start_all_job">Start All Job</h4>
+<div class="olist arabic">
+<ol class="arabic">
 <li>
-<p>It start All the job schedulers that in the database.</p>
+<p>It start All the job schedulers that in the database amd it store jobs into jobstore temporarily</p>
 <div class="literalblock">
 <div class="content">
 <pre>void startAllSchedulers();</pre>
 </div>
 </div>
 </li>
+</ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_create_new_job">Create New Job</h4>
+<div class="olist arabic">
+<ol class="arabic">
 <li>
-<p>It Create New Job And Switch JobStore to persistence table</p>
+<p>It Creates New Job And Switch job to JobStore from persistence table</p>
 </li>
 <li>
-<p><strong>@param</strong> jobInfo JobInformation(Ex: timingInfo, JobName etc)</p>
+<p><code>@param</code> jobInfo it represents Job scheduling information.(Ex: timingInfo, JobName etc)</p>
 <div class="literalblock">
 <div class="content">
-<pre>void scheduleNewJob(SchedulerJobInfo jobInfo);</pre>
+<pre>void createNewJob(final SchedulerJobInfo jobInfo);</pre>
 </div>
 </div>
 </li>
+</ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_update_job">Update Job</h4>
+<div class="olist arabic">
+<ol class="arabic">
 <li>
-<p>It Update the job information and reschedule the information into JobStore</p>
+<p>It updates the job information and reschedule the information into JobStore</p>
 </li>
 <li>
-<p><strong>@param</strong> jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)</p>
+<p><code>@param</code> jobInfo it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).</p>
 <div class="literalblock">
 <div class="content">
-<pre>void updateScheduleJob(SchedulerJobInfo jobInfo);</pre>
+<pre>void updateScheduleJob(final SchedulerJobInfo jobInfo);</pre>
 </div>
 </div>
 </li>
+</ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_un_schedule_job">Un-Schedule Job</h4>
+<div class="ulist">
+<ul>
 <li>
-<p>It takes JobName and removes the job from the JobStore</p>
+<p>It takes JobName and removes the job from the JobStore, and it can only remove single trigger that is associate with a specific job.</p>
 </li>
 <li>
-<p><strong>@param</strong> jobName Name of the running job</p>
+<p><code>@param</code> jobName Name of the running job which need to be unscheduled</p>
 </li>
 <li>
-<p><strong>@return</strong> {@link boolean}</p>
+<p><code>@return {@code true}</code> if the job successfully un-schedule,</p>
+</li>
+<li>
+<p><code>{@code false}</code> if the job don&#8217;t un-schedule</p>
 <div class="literalblock">
 <div class="content">
-<pre>boolean unScheduleJob(String jobName);</pre>
+<pre>boolean unScheduleJob(final String jobName);</pre>
 </div>
 </div>
 </li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_stop_job">Stop Job</h4>
+<div class="olist arabic">
+<ol class="arabic">
 <li>
 <p>loops through all the triggers having a reference to this job, to un-schedule them</p>
 </li>
 <li>
-<p><strong>@param</strong> jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)</p>
+<p><code>@param</code> jobName it represent a running job name which need to be stopped</p>
 </li>
 <li>
-<p><strong>@return</strong> {@link boolean}</p>
+<p><code>@return {@code true}</code> if the job successfully deleted,</p>
+</li>
+<li>
+<p><code>{@code false}</code> if the job don&#8217;t delete</p>
 <div class="literalblock">
 <div class="content">
-<pre>boolean deleteJob(SchedulerJobInfo jobInfo);</pre>
+<pre>boolean stopJob(final String jobName);</pre>
 </div>
 </div>
 </li>
+</ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_stop_all_jobs">Stop All Jobs</h4>
+<div class="olist arabic">
+<ol class="arabic">
 <li>
-<p>It pause the currently running job.</p>
-</li>
-<li>
-<p><strong>@param</strong> jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)</p>
-</li>
-<li>
-<p><strong>@return</strong> {@link boolean}</p>
+<p>it stops All the Running jobs.</p>
 <div class="literalblock">
 <div class="content">
-<pre>boolean pauseJob(SchedulerJobInfo jobInfo);</pre>
+<pre>void stopAllJobs();</pre>
 </div>
 </div>
 </li>
+</ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_pause_job">Pause Job</h4>
+<div class="olist arabic">
+<ol class="arabic">
 <li>
-<p>It resume the pausing jobs and job start running again</p>
+<p>It pauses the currently running job.</p>
 </li>
 <li>
-<p><strong>@param</strong> jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)</p>
+<p>Job must have in jobstore</p>
 </li>
 <li>
-<p><strong>@return</strong> {@link boolean}</p>
+<p><code>@param</code> jobName it represent a running job name which need to be paused.</p>
+</li>
+<li>
+<p><code>@return {@code true}</code> if the job successfully pause,</p>
+</li>
+<li>
+<p><code>{@code false}</code> if the job don&#8217;t pause</p>
 <div class="literalblock">
 <div class="content">
-<pre>boolean resumeJob(SchedulerJobInfo jobInfo);</pre>
+<pre>boolean pauseJob(final String jobName);</pre>
 </div>
 </div>
 </li>
+</ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_resume_job">Resume Job</h4>
+<div class="olist arabic">
+<ol class="arabic">
 <li>
-<p>if there is needed any Immediate call/hit of a particular job then method can be called</p>
+<p>It resumes the pausing jobs and job start running again</p>
 </li>
 <li>
-<p><strong>@param</strong> jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)</p>
+<p>Job must have in jobstore.</p>
 </li>
 <li>
-<p><strong>@return</strong> {@link boolean}</p>
+<p><code>@param</code> jobName it represent a running job name which need to be resume</p>
+</li>
+<li>
+<p><code>@return {@code true}</code> if the job successfully resume,</p>
+</li>
+<li>
+<p><code>{@code false}</code> if the job don&#8217;t resume</p>
 <div class="literalblock">
 <div class="content">
-<pre>boolean startJobNow(SchedulerJobInfo jobInfo);</pre>
+<pre>boolean resumeJob(final String jobName);</pre>
 </div>
 </div>
 </li>
+</ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_immediate_trigger_job">Immediate Trigger Job</h4>
+<div class="ulist">
+<ul>
 <li>
-<p>Shutdown JobStore</p>
+<p>if there is needed any Immediate trigger to a particular job then this method can be called</p>
+</li>
+<li>
+<p>Job must have in jobstore for calling this method</p>
+</li>
+<li>
+<p><code>@param</code> jobName it represents a running job name which need to be trigger instantly.</p>
+</li>
+<li>
+<p><code>@return {@code true}</code> if the job successfully start,</p>
+</li>
+<li>
+<p><code>{@code false}</code> if the job don&#8217;t start</p>
 <div class="literalblock">
 <div class="content">
-<pre>void shutdownScheduler();</pre>
+<pre>boolean triggerJobNow(final String jobName);</pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_start_job">Start Job</h4>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Add the given job to the Scheduler, if it doesn&#8217;t already exist.</p>
+</li>
+<li>
+<p><code>@param</code> jobName it represents the jobName which need to be added.</p>
+</li>
+<li>
+<p><code>@return {@code true}</code> if the job was actually added,</p>
+</li>
+<li>
+<p><code>{@code false}</code> if it already existed before</p>
+<div class="literalblock">
+<div class="content">
+<pre>boolean startJob(final String jobName);</pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_find_all_running_jobs_details">Find All Running Jobs Details</h4>
+<div class="ulist">
+<ul>
+<li>
+<p>It fetches all the job from jobstore with any group</p>
+</li>
+<li>
+<p>Job must have in jobstore for calling this method</p>
+</li>
+<li>
+<p><code>@return {@link SchedulerJobInfo}</code> it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).</p>
+<div class="literalblock">
+<div class="content">
+<pre>List&lt;SchedulerJobInfo&gt; getAllRunningJobs();</pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_get_job_by_name">Get Job by Name</h4>
+<div class="ulist">
+<ul>
+<li>
+<p>Find single Job details by Job Name</p>
+</li>
+<li>
+<p>Job must have in jobstore for calling this method</p>
+</li>
+<li>
+<p><code>@param</code> jobName it represents a running job name by which we can find Job scheduling information</p>
+</li>
+<li>
+<p><code>@return {@link SchedulerJobInfo}</code> it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).</p>
+<div class="literalblock">
+<div class="content">
+<pre>SchedulerJobInfo getRunningJob(final String jobName);</pre>
 </div>
 </div>
 </li>
@@ -711,10 +871,6 @@ support for JTA transactions and clustering.</p>
 </div>
 </div>
 </div>
-</div>
-<div id="footer">
-<div id="footer-text">
-Last updated 2021-04-01 10:22:51 +0600
 </div>
 </div>
 </body>

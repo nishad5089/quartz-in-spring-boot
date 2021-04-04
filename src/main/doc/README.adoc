@@ -1,6 +1,8 @@
 
 == Quartz Enterprise Job Scheduler
 :stylesheet: dark.css
+:nofooter:
+:source-highlighter: highlightjs
 
  What is the Quartz Job Scheduling Library?
 
@@ -11,18 +13,6 @@ tens-of-thousands of jobs; jobs whose tasks are defined as standard Java
 components that may execute virtually anything you may program them to do.
 The Quartz Scheduler includes many enterprise-class features, such as
 support for JTA transactions and clustering.
-
-// What Can Quartz Do For You?
-//
-//If your application has tasks that need to occur at given moments in time, or if your system has recurring maintenance jobs then Quartz may be your ideal solution.
-//
-//Sample uses of job scheduling with Quartz:
-//
-//* Driving Process Workflow: As a new order is initially placed, schedule a Job to fire in exactly 2 hours, that will check the status of that order, and trigger a warning notification if an order confirmation message has not yet been received for the order, as well as changing the order’s status to 'awaiting intervention'.
-//
-//* System Maintenance: Schedule a job to dump the contents of a database into an XML file every business day (all weekdays except holidays) at 11:30 PM.
-//
-//* Providing reminder services within an application.
 
 === Features
 *Runtime Environments*
@@ -36,33 +26,44 @@ support for JTA transactions and clustering.
 * Quartz can be instantiated as a cluster of stand-alone programs (with load-balance and fail-over capabilities) for the execution of jobs
 
 === Create Quartz Job.
-* *@param* jobClass  Class whose executeInternal() method needs to be called.
-* *@param* isDurable Job needs to be persisted even after completion. if true, job will be persisted, not otherwise.
-* *@param* jobName   Job name.
-* *@param* jobGroup  Job group.
-* *@return* JobDetail object
 
-    public JobDetail createJob(Class<? extends QuartzJobBean> jobClass, boolean isDurable, String jobName, String jobGroup) {
+ * `@param` SchedulerJobInfo it represents Job scheduling information.
+ * `@param` isDurable Job needs to be persisted even after completion. if true, job will be persisted, not otherwise.
+ * `@return` JobDetail object
+
+.Click to see the code
+[%collapsible]
+====
+[,java]
+----
+    public JobDetail createJob(SchedulerJobInfo jobInfo, boolean isDurable) throws ClassNotFoundException {
         JobDetailFactoryBean factoryBean = new JobDetailFactoryBean();
-        factoryBean.setJobClass(jobClass);
+        factoryBean.setJobClass((Class<? extends QuartzJobBean>) jobInfo.getJobClass());
         factoryBean.setDurability(isDurable);
-        factoryBean.setName(jobName);
-        factoryBean.setGroup(jobGroup);
+        factoryBean.setName(jobInfo.getJobName());
+        factoryBean.setGroup(jobInfo.getJobGroup());
         JobDataMap jobDataMap = new JobDataMap();
-        jobDataMap.put(jobName + jobGroup, jobClass.getName());
+        jobDataMap.put(jobInfo.getJobName(), jobInfo);
         factoryBean.setJobDataMap(jobDataMap);
         factoryBean.afterPropertiesSet();
         return factoryBean.getObject();
     }
+----
+====
 
 === Create cron trigger
 
- * *@param* triggerName        Trigger name.
- * *@param* startTime          Trigger start time.
- * *@param* cronExpression     Cron expression.
- * *@param* misFireInstruction Misfire instruction (what to do in case of misfire happens).
- * *@return* {@link CronTrigger}
+ * `@param` triggerName        Trigger name.
+ * `@param` startTime          Trigger start time.
+ * `@param` cronExpression     Cron expression.
+ * `@param` misFireInstruction Misfire instruction (what to do in case of misfire happens).
+ * `@return` { @link CronTrigger }
 
+.Click to see the code
+[%collapsible]
+====
+[,java]
+----
     public CronTrigger createCronTrigger(String triggerName, Date startTime, String cronExpression, int misFireInstruction) {
         CronTriggerFactoryBean factoryBean = new CronTriggerFactoryBean();
         factoryBean.setName(triggerName);
@@ -76,6 +77,8 @@ support for JTA transactions and clustering.
         }
         return factoryBean.getObject();
     }
+----
+====
 
 === Create simple trigger.
 
@@ -85,6 +88,11 @@ support for JTA transactions and clustering.
  * *@param* misFireInstruction Misfire instruction (what to do in case of misfire happens).
  * *@return* {@link SimpleTrigger}
 
+.Click to see the code
+[%collapsible]
+====
+[,java]
+----
    public SimpleTrigger createSimpleTrigger(String triggerName, Date startTime, Long repeatTime, int misFireInstruction) {
         SimpleTriggerFactoryBean factoryBean = new SimpleTriggerFactoryBean();
         factoryBean.setName(triggerName);
@@ -95,69 +103,113 @@ support for JTA transactions and clustering.
         factoryBean.afterPropertiesSet();
         return factoryBean.getObject();
     }
+----
+====
 
 === Available Method to call
 
-     * It start All the job schedulers that in the database.
+==== Start All Job
+
+ . It start All the job schedulers that in the database amd it store jobs into jobstore temporarily
 
     void startAllSchedulers();
 
+==== Create New Job
 
-     * It Create New Job And Switch JobStore to persistence table
+ . It Creates New Job And Switch job to JobStore from persistence table
 
-     * *@param* jobInfo JobInformation(Ex: timingInfo, JobName etc)
+ . `@param` jobInfo it represents Job scheduling information.(Ex: timingInfo, JobName etc)
 
-    void scheduleNewJob(SchedulerJobInfo jobInfo);
+    void createNewJob(final SchedulerJobInfo jobInfo);
 
+==== Update Job
+     . It updates the job information and reschedule the information into JobStore
 
-     * It Update the job information and reschedule the information into JobStore
+     . `@param` jobInfo it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).
 
-     * *@param* jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)
+   void updateScheduleJob(final SchedulerJobInfo jobInfo);
 
-    void updateScheduleJob(SchedulerJobInfo jobInfo);
+==== Un-Schedule Job
+     * It takes JobName and removes the job from the JobStore, and it can only remove single trigger that is associate with a specific job.
 
+     * `@param` jobName Name of the running job which need to be unscheduled
+     * `@return {@code true}` if the job successfully un-schedule,
+     * `{@code false}` if the job don't un-schedule
 
-     * It takes JobName and removes the job from the JobStore
+    boolean unScheduleJob(final String jobName);
 
-     * *@param* jobName Name of the running job
-     * *@return* {@link boolean}
+==== Stop Job
+     . loops through all the triggers having a reference to this job, to un-schedule them
 
-    boolean unScheduleJob(String jobName);
+     . `@param` jobName it represent a running job name which need to be stopped
+     . `@return {@code true}` if the job successfully deleted,
+     . `{@code false}` if the job don't delete
 
+    boolean stopJob(final String jobName);
 
-     * loops through all the triggers having a reference to this job, to un-schedule them
+==== Stop All Jobs
+     . it stops All the Running jobs.
 
-     * *@param* jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)
-     * *@return* {@link boolean}
+    void stopAllJobs();
 
-    boolean deleteJob(SchedulerJobInfo jobInfo);
+==== Pause Job
 
+     . It pauses the currently running job.
+     . Job must have in jobstore
 
-     * It pause the currently running job.
+     . `@param` jobName it represent a running job name which need to be paused.
+     . `@return {@code true}` if the job successfully pause,
+     . `{@code false}` if the job don't pause
 
-     * *@param* jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)
-     * *@return* {@link boolean}
+    boolean pauseJob(final String jobName);
 
-    boolean pauseJob(SchedulerJobInfo jobInfo);
+==== Resume Job
 
+     . It resumes the pausing jobs and job start running again
+     . Job must have in jobstore.
+     . `@param` jobName it represent a running job name which need to be resume
+     . `@return {@code true}` if the job successfully resume,
+     . `{@code false}` if the job don't resume
 
-     * It resume the pausing jobs and job start running again
+    boolean resumeJob(final String jobName);
 
-     * *@param* jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)
-     * *@return* {@link boolean}
+==== Immediate Trigger Job
 
-    boolean resumeJob(SchedulerJobInfo jobInfo);
+     * if there is needed any Immediate trigger to a particular job then this method can be called
+     * Job must have in jobstore for calling this method
 
+     * `@param` jobName it represents a running job name which need to be trigger instantly.
+     * `@return {@code true}` if the job successfully start,
+     * `{@code false}` if the job don't start
 
-     * if there is needed any Immediate call/hit of a particular job then method can be called
+    boolean triggerJobNow(final String jobName);
 
-     * *@param* jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)
-     * *@return* {@link boolean}
+==== Start Job
 
-    boolean startJobNow(SchedulerJobInfo jobInfo);
+     . Add the given job to the Scheduler, if it doesn't already exist.
+     . `@param` jobName it represents the jobName which need to be added.
+     . `@return {@code true}` if the job was actually added,
+     . `{@code false}` if it already existed before
 
+    boolean startJob(final String jobName);
 
-     * Shutdown JobStore
+==== Find All Running Jobs Details
 
-    void shutdownScheduler();
+     * It fetches all the job from jobstore with any group
+     * Job must have in jobstore for calling this method
+
+     * `@return {@link SchedulerJobInfo}` it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).
+
+    List<SchedulerJobInfo> getAllRunningJobs();
+
+==== Get Job by Name
+
+     * Find single Job details by Job Name
+     * Job must have in jobstore for calling this method
+
+     * `@param` jobName it represents a running job name by which we can find Job scheduling information
+     * `@return {@link SchedulerJobInfo}` it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).
+
+    SchedulerJobInfo getRunningJob(final String jobName);
+
 

@@ -1,12 +1,13 @@
 package com.quartzadvance.service.impl;
 
-import com.quartzadvance.service.JobScheduleCreator;
+import com.quartzadvance.utils.JobScheduleCreator;
 import com.quartzadvance.entity.SchedulerJobInfo;
 import com.quartzadvance.repository.SchedulerRepository;
 import com.quartzadvance.service.SchedulerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
+import org.quartz.impl.matchers.GroupMatcher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
@@ -14,8 +15,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * @author Abdur Rahim Nishad
@@ -34,7 +39,7 @@ public class SchedulerServiceImpl implements SchedulerService {
     private final JobScheduleCreator scheduleCreator;
 
     /**
-     * It start All the job schedulers that in the database.
+     * It start All the job schedulers that in the database amd it store job into jobstore temporarily
      */
     @Override
     public void startAllSchedulers() {
@@ -43,23 +48,12 @@ public class SchedulerServiceImpl implements SchedulerService {
             Scheduler scheduler = schedulerFactoryBean.getScheduler();
             jobInfoList.forEach(jobInfo -> {
                 try {
-                    JobDetail jobDetail = JobBuilder.newJob((Class<? extends QuartzJobBean>) Class.forName(jobInfo.getJobClass()))
+                    JobDetail jobDetail = JobBuilder.newJob((Class<? extends QuartzJobBean>) jobInfo.getJobClass())
                             .withIdentity(jobInfo.getJobName(), jobInfo.getJobGroup()).build();
                     if (!scheduler.checkExists(jobDetail.getKey())) {
-                        Trigger trigger;
-                        jobDetail = scheduleCreator.createJob((Class<? extends QuartzJobBean>) Class.forName(jobInfo.getJobClass()),
-                                false, jobInfo.getJobName(), jobInfo.getJobGroup());
-
-                        if (jobInfo.getCronJob() && CronExpression.isValidExpression(jobInfo.getCronExpression())) {
-                            trigger = scheduleCreator.createCronTrigger(jobInfo.getJobName(), new Date(System.currentTimeMillis() + 1000),
-                                    jobInfo.getCronExpression(), SimpleTrigger.MISFIRE_INSTRUCTION_FIRE_NOW);
-
-                        } else {
-                            trigger = scheduleCreator.createSimpleTrigger(jobInfo.getJobName(), new Date(System.currentTimeMillis() + 2000),
-                                    jobInfo.getRepeatTime(), SimpleTrigger.MISFIRE_INSTRUCTION_FIRE_NOW);
-                        }
-                        scheduler.scheduleJob(jobDetail, trigger);
+                        this.configureSchedule(jobInfo, scheduler, jobDetail);
                     }
+                    log.info("Job already exist");
                 } catch (ClassNotFoundException e) {
                     log.error("Class Not Found - {}", jobInfo.getJobClass(), e);
                 } catch (SchedulerException e) {
@@ -70,32 +64,20 @@ public class SchedulerServiceImpl implements SchedulerService {
     }
 
     /**
-     * It Create New Job And Switch JobStore to persistence table
+     * It Create New Job And Switch job to JobStore from persistence table
      *
-     * @param jobInfo JobInformation(Ex: timingInfo, JobName etc)
+     * @param jobInfo it represents Job scheduling information.(Ex: timingInfo, JobName etc)
      */
     @Override
-    public void scheduleNewJob(SchedulerJobInfo jobInfo) {
+    public void createNewJob(final SchedulerJobInfo jobInfo) {
         try {
             Scheduler scheduler = schedulerFactoryBean.getScheduler();
 
-            JobDetail jobDetail = JobBuilder.newJob((Class<? extends QuartzJobBean>) Class.forName(jobInfo.getJobClass()))
-                    .withIdentity(jobInfo.getJobName(), jobInfo.getJobGroup()).build();
+            JobDetail jobDetail = JobBuilder.newJob((Class<? extends QuartzJobBean>) jobInfo.getJobClass())
+                    .withIdentity(jobInfo.getJobName(), jobInfo.getJobGroup())
+                    .build();
             if (!scheduler.checkExists(jobDetail.getKey())) {
-
-                jobDetail = scheduleCreator.createJob((Class<? extends QuartzJobBean>) Class.forName(jobInfo.getJobClass()),
-                        false, jobInfo.getJobName(), jobInfo.getJobGroup());
-
-                Trigger trigger;
-                if (jobInfo.getCronJob()) {
-                    trigger = scheduleCreator.createCronTrigger(jobInfo.getJobName(), new Date(), jobInfo.getCronExpression(),
-                            SimpleTrigger.MISFIRE_INSTRUCTION_FIRE_NOW);
-                } else {
-                    trigger = scheduleCreator.createSimpleTrigger(jobInfo.getJobName(), new Date(), jobInfo.getRepeatTime(),
-                            SimpleTrigger.MISFIRE_INSTRUCTION_FIRE_NOW);
-                }
-
-                scheduler.scheduleJob(jobDetail, trigger);
+                this.configureSchedule(jobInfo, scheduler, jobDetail);
                 schedulerRepository.save(jobInfo);
             } else {
                 log.error("scheduleNewJobRequest.jobAlreadyExist");
@@ -107,21 +89,16 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
     }
 
+
+
     /**
-     * It Update the job information and reschedule the information into JobStore
+     * It update the job information and reschedule the information into JobStore
      *
-     * @param jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)
+     * @param jobInfo it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).
      */
     @Override
-    public void updateScheduleJob(SchedulerJobInfo jobInfo) {
-        Trigger newTrigger;
-        if (jobInfo.getCronJob()) {
-            newTrigger = scheduleCreator.createCronTrigger(jobInfo.getJobName(), new Date(), jobInfo.getCronExpression(),
-                    SimpleTrigger.MISFIRE_INSTRUCTION_FIRE_NOW);
-        } else {
-            newTrigger = scheduleCreator.createSimpleTrigger(jobInfo.getJobName(), new Date(), jobInfo.getRepeatTime(),
-                    SimpleTrigger.MISFIRE_INSTRUCTION_FIRE_NOW);
-        }
+    public void updateScheduleJob(final SchedulerJobInfo jobInfo) {
+        Trigger newTrigger = configureTrigger(jobInfo);
         try {
             schedulerFactoryBean.getScheduler().rescheduleJob(TriggerKey.triggerKey(jobInfo.getJobName()), newTrigger);
             schedulerRepository.save(jobInfo);
@@ -133,11 +110,12 @@ public class SchedulerServiceImpl implements SchedulerService {
     /**
      * It takes JobName and removes the job from the JobStore
      *
-     * @param jobName Name of the running job
-     * @return {@link boolean}
+     * @param jobName Name of the running job which need to be unscheduled
+     * @return {@code true} if the job successfully un-schedule,
+     * {@code false} if the job don't un-schedule
      */
     @Override
-    public boolean unScheduleJob(String jobName) {
+    public boolean unScheduleJob(final String jobName) {
         try {
             return schedulerFactoryBean.getScheduler().unscheduleJob(new TriggerKey(jobName));
         } catch (SchedulerException e) {
@@ -149,11 +127,13 @@ public class SchedulerServiceImpl implements SchedulerService {
     /**
      * loops through all the triggers having a reference to this job, to un-schedule them
      *
-     * @param jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)
-     * @return {@link boolean}
+     * @param jobName it represent a running job name which need to be stopped
+     * @return {@code true} if the job successfully deleted,
+     * {@code false} if the job don't delete
      */
     @Override
-    public boolean deleteJob(SchedulerJobInfo jobInfo) {
+    public boolean stopJob(final String jobName) {
+        final SchedulerJobInfo jobInfo = schedulerRepository.findByJobName(jobName);
         try {
             return schedulerFactoryBean.getScheduler().deleteJob(new JobKey(jobInfo.getJobName(), jobInfo.getJobGroup()));
         } catch (SchedulerException e) {
@@ -164,12 +144,15 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * It pause the currently running job.
+     * Job must have in jobstore
      *
-     * @param jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)
-     * @return {@link boolean}
+     * @param jobName it represent a running job name which need to be paused.
+     * @return {@code true} if the job successfully pause,
+     * {@code false} if the job don't pause
      */
     @Override
-    public boolean pauseJob(SchedulerJobInfo jobInfo) {
+    public boolean pauseJob(final String jobName) {
+        final SchedulerJobInfo jobInfo = schedulerRepository.findByJobName(jobName);
         try {
             schedulerFactoryBean.getScheduler().pauseJob(new JobKey(jobInfo.getJobName(), jobInfo.getJobGroup()));
             return true;
@@ -181,12 +164,15 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * It resume the pausing jobs and job start running again
+     * Job must have in jobstore
      *
-     * @param jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)
-     * @return {@link boolean}
+     * @param jobName it represent a running job name which need to be resume
+     * @return {@code true} if the job successfully resume,
+     * {@code false} if the job don't resume
      */
     @Override
-    public boolean resumeJob(SchedulerJobInfo jobInfo) {
+    public boolean resumeJob(final String jobName) {
+        final SchedulerJobInfo jobInfo = schedulerRepository.findByJobName(jobName);
         try {
             schedulerFactoryBean.getScheduler().resumeJob(new JobKey(jobInfo.getJobName(), jobInfo.getJobGroup()));
             return true;
@@ -197,13 +183,16 @@ public class SchedulerServiceImpl implements SchedulerService {
     }
 
     /**
-     * if there is needed any Immediate call/hit of a job then method can be called
+     * if there is needed any Immediate trigger to a particular job then this method can be called
+     * Job must have in jobstore for calling this method
      *
-     * @param jobInfo JobInformation(Ex: timingInfo, JobName, jobGroup etc)
-     * @return {@link boolean}
+     * @param jobName it represent a running job name which need to be trigger instantly.
+     * @return {@code true} if the job successfully start,
+     * {@code false} if the job don't start
      */
     @Override
-    public boolean startJobNow(SchedulerJobInfo jobInfo) {
+    public boolean triggerJobNow(final String jobName) {
+        final SchedulerJobInfo jobInfo = schedulerRepository.findByJobName(jobName);
         try {
             schedulerFactoryBean.getScheduler().triggerJob(new JobKey(jobInfo.getJobName(), jobInfo.getJobGroup()));
             return true;
@@ -211,6 +200,140 @@ public class SchedulerServiceImpl implements SchedulerService {
             log.error("Failed to start new job - {}", jobInfo.getJobName(), e);
             return false;
         }
+    }
+
+    /**
+     * It fetch all the job from jobstore with any group
+     * Job must have in jobstore for calling this method
+     *
+     * @return {@link SchedulerJobInfo} it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).
+     */
+    @Override
+    public List<SchedulerJobInfo> getAllRunningJobs() {
+        try {
+            return schedulerFactoryBean.getScheduler().getJobKeys(GroupMatcher.anyGroup())
+                    .stream()
+                    .map(jobKey -> {
+                        try {
+                            final JobDetail jobDetail = schedulerFactoryBean.getScheduler().getJobDetail(jobKey);
+                            return (SchedulerJobInfo) jobDetail.getJobDataMap().get(jobKey.getName());
+                        } catch (final SchedulerException e) {
+                            log.error(e.getMessage(), e);
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+        } catch (final SchedulerException e) {
+            log.error(e.getMessage(), e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Find single Job by Job Name
+     * Job must have in jobstore for calling this method
+     *
+     * @param jobName it represent a running job name by which we can find Job scheduling information
+     * @return {@link SchedulerJobInfo} it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).
+     */
+    @Override
+    public SchedulerJobInfo getRunningJob(final String jobName) {
+        try {
+            SchedulerJobInfo jobInfo = schedulerRepository.findByJobName(jobName);
+            final JobDetail jobDetail = schedulerFactoryBean.getScheduler().getJobDetail(new JobKey(jobInfo.getJobName(), jobInfo.getJobGroup()));
+            if (jobDetail == null) {
+                log.error("Failed to find timer with ID '{}'", jobName);
+                return null;
+            }
+            return (SchedulerJobInfo) jobDetail.getJobDataMap().get(jobName);
+        } catch (final SchedulerException e) {
+            log.error(e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * Add the given job to the Scheduler, if it doesn't already exist.
+     *
+     * @param jobName it represent the jobName which need to be added.
+     * @return {@code true} if the job was actually added,
+     * {@code false} if it already existed before
+     */
+
+    @Override
+    public boolean startJob(final String jobName) {
+        SchedulerJobInfo jobInfo = schedulerRepository.findByJobName(jobName);
+        try {
+            Scheduler scheduler = schedulerFactoryBean.getScheduler();
+            JobDetail jobDetail = JobBuilder.newJob((Class<? extends QuartzJobBean>) jobInfo.getJobClass())
+                    .withIdentity(jobInfo.getJobName(), jobInfo.getJobGroup()).build();
+            if (!scheduler.checkExists(jobDetail.getKey())) {
+                configureSchedule(jobInfo, scheduler, jobDetail);
+                return true;
+            } else {
+                log.error("scheduleNewJobRequest.jobAlreadyExist");
+                return false;
+            }
+        } catch (ClassNotFoundException e) {
+            log.error("Class Not Found - {}", jobInfo.getJobClass(), e);
+        } catch (SchedulerException e) {
+            log.error(e.getMessage(), e);
+        }
+        return false;
+    }
+
+    /**
+     * it stop All the Running jobs.
+     */
+    @Override
+    public void stopAllJobs() {
+        try {
+            schedulerFactoryBean.getScheduler().getJobKeys(GroupMatcher.anyGroup()).forEach(res -> {
+                try {
+                    log.info("job stopping......");
+                    schedulerFactoryBean.getScheduler().deleteJob(res);
+
+                } catch (SchedulerException e) {
+                    e.printStackTrace();
+                }
+            });
+        } catch (final SchedulerException e) {
+            log.error(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * configuring schedule for executing jobs and store it into jobstore
+     *
+     * @param jobInfo   it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).
+     * @param scheduler it tell quartz to schedule the job using specific trigger
+     * @param jobDetail Quartz does not store an actual instance of a Job class, but instead allows you to define an instance of one, through the use of a JobDetail.
+     * @throws ClassNotFoundException
+     * @throws SchedulerException
+     */
+    private void configureSchedule(SchedulerJobInfo jobInfo, Scheduler scheduler, JobDetail jobDetail) throws ClassNotFoundException, SchedulerException {
+        jobDetail = scheduleCreator.createJob(jobInfo, false);
+        Trigger trigger = configureTrigger(jobInfo);
+        scheduler.scheduleJob(jobDetail, trigger);
+    }
+
+    /**
+     * Trigger configuration for job
+     *
+     * @param jobInfo it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).
+     * @return {@link Trigger}
+     */
+    private Trigger configureTrigger(SchedulerJobInfo jobInfo) {
+        Trigger trigger;
+        if (jobInfo.getCronJob()) {
+            trigger = scheduleCreator.createCronTrigger(jobInfo.getJobName(), new Date(), jobInfo.getCronExpression(),
+                    SimpleTrigger.MISFIRE_INSTRUCTION_FIRE_NOW);
+        } else {
+            trigger = scheduleCreator.createSimpleTrigger(jobInfo.getJobName(), new Date(), jobInfo.getRepeatTime(),
+                    SimpleTrigger.MISFIRE_INSTRUCTION_FIRE_NOW);
+        }
+        return trigger;
     }
 
     /**
@@ -224,10 +347,11 @@ public class SchedulerServiceImpl implements SchedulerService {
             log.error(e.getMessage(), e);
         }
     }
+
     /**
      * Shutdown JobStore
      */
-    @Override
+    @PreDestroy
     public void shutdownScheduler() {
         try {
             schedulerFactoryBean.getScheduler().shutdown();

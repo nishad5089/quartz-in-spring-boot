@@ -4,6 +4,8 @@ import com.quartzadvance.entity.SchedulerJobInfo;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 /**
  * @author Abdur Rahim Nishad
  * @since 2021/31/03

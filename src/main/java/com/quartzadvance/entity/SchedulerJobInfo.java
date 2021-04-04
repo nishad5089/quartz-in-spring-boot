@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.persistence.*;
+import java.io.Serializable;
 
 /**
  * SchedulerJobInfo represent the timing-info and initial meta data for a job
@@ -15,7 +16,7 @@ import javax.persistence.*;
 @Setter
 @Entity
 @Table(name = "scheduler_job_info")
-public class SchedulerJobInfo {
+public class SchedulerJobInfo implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,11 +26,17 @@ public class SchedulerJobInfo {
 
     private String jobGroup;
 
-    private String jobClass;
+    private Class jobClass;
 
     private String cronExpression;
 
     private Long repeatTime;
 
+    private int totalFireCount;
+
+    private long initialOffsetMs;
+
     private Boolean cronJob;
+
+    private boolean runForever;
 }

@@ -1,6 +1,7 @@
 package com.quartzadvance.controller;
 
 import com.quartzadvance.entity.SchedulerJobInfo;
+import com.quartzadvance.jobs.SimpleJob;
 import com.quartzadvance.repository.SchedulerRepository;
 import com.quartzadvance.service.SchedulerService;
 import lombok.RequiredArgsConstructor;
@@ -22,44 +23,45 @@ public class QuartzController {
 
     private final SchedulerRepository repository;
 
-    @PostMapping("runAll")
+    @GetMapping("runAll")
     public void runAllJobs() {
         schedulerService.startAllSchedulers();
     }
 
     @PostMapping("create")
     public void createJob() {
-        SchedulerJobInfo schedulerJobInfo = repository.findByJobName("jkjkj");
-//        schedulerJobInfo.setRepeatTime(1000L);
-//        schedulerJobInfo.setJobName("jkjkj");
-//        schedulerJobInfo.setJobClass("com.quartzadvance.jobs.SimpleJob");
-//        schedulerJobInfo.setCronJob(false);
-//        schedulerJobInfo.setJobGroup("Test Job3");
-        schedulerService.scheduleNewJob(schedulerJobInfo);
+        SchedulerJobInfo schedulerJobInfo = new SchedulerJobInfo();
+        schedulerJobInfo.setRepeatTime(1000L);
+        schedulerJobInfo.setJobName("email send");
+        schedulerJobInfo.setJobClass(SimpleJob.class);
+        schedulerJobInfo.setCronJob(false);
+        schedulerJobInfo.setJobGroup("Test Job3");
+        schedulerService.createNewJob(schedulerJobInfo);
     }
 
-    @DeleteMapping("delete/{jobName}")
-    public Boolean deleteJob(@PathVariable String jobName) {
-        SchedulerJobInfo schedulerJobInfo = repository.findByJobName(jobName);
-        return schedulerService.deleteJob(schedulerJobInfo);
+    @GetMapping("start/{jobName}")
+    public boolean startJob(@PathVariable String jobName) {
+        return schedulerService.startJob(jobName);
+    }
+
+    @DeleteMapping("stop/{jobName}")
+    public Boolean stopJob(@PathVariable String jobName) {
+        return schedulerService.stopJob(jobName);
     }
 
     @GetMapping("pause/{jobName}")
     public Boolean pushJob(@PathVariable String jobName) {
-        SchedulerJobInfo schedulerJobInfo = repository.findByJobName(jobName);
-        return schedulerService.pauseJob(schedulerJobInfo);
+        return schedulerService.pauseJob(jobName);
     }
 
     @GetMapping("resume/{jobName}")
     public Boolean resumeJob(@PathVariable String jobName) {
-        SchedulerJobInfo schedulerJobInfo = repository.findByJobName(jobName);
-        return schedulerService.resumeJob(schedulerJobInfo);
+        return schedulerService.resumeJob(jobName);
     }
 
-    @GetMapping("start/{jobName}")
-    public Boolean startJob(@PathVariable String jobName) {
-        SchedulerJobInfo schedulerJobInfo = repository.findByJobName(jobName);
-        return schedulerService.startJobNow(schedulerJobInfo);
+    @GetMapping("triggernow/{jobName}")
+    public Boolean triggerJobNow(@PathVariable String jobName) {
+        return schedulerService.triggerJobNow(jobName);
     }
 
     @GetMapping("unschedule/{jobName}")
@@ -74,13 +76,18 @@ public class QuartzController {
         schedulerService.updateScheduleJob(schedulerJobInfo);
     }
 
-    @GetMapping("destroyAllJob")
-    public void destroy() {
-        schedulerService.shutdownScheduler();
+    @GetMapping("runningjobs")
+    public List<SchedulerJobInfo> getAllRunningJobs() {
+        return schedulerService.getAllRunningJobs();
     }
 
-//    @GetMapping("runningjobs")
-//    public List<SchedulerJobInfo> runningAllJobs(){
-//        return schedulerService.getAllRunningJobs();
-//    }
+    @GetMapping("job/{jobName}")
+    public SchedulerJobInfo getRunningJobByJobName(@PathVariable String jobName) {
+        return schedulerService.getRunningJob(jobName);
+    }
+
+    @GetMapping("stopall")
+    public void stopAllJobs() {
+        schedulerService.stopAllJobs();
+    }
 }
