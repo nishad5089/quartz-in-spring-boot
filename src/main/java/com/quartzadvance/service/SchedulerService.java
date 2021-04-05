@@ -20,7 +20,7 @@ public interface SchedulerService {
      *
      * @param jobInfo it represents Job scheduling information.(Ex: timingInfo, JobName etc)
      */
-    void createNewJob(final SchedulerJobInfo jobInfo);
+    void createNewJob(SchedulerJobInfo jobInfo);
 
     /**
      * It update the job information and reschedule the information into JobStore
@@ -107,5 +107,11 @@ public interface SchedulerService {
      * @return {@link SchedulerJobInfo} it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).
      */
     SchedulerJobInfo getRunningJob(final String jobName);
+
+    /**
+     *
+     * @param basePackage
+     */
+    void createJobForAnnotatedBean(String basePackage);
 
 }

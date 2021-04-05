@@ -1,5 +1,6 @@
 package com.quartzadvance.service.impl;
 
+import com.quartzadvance.annotations.NishadSchedular;
 import com.quartzadvance.utils.JobScheduleCreator;
 import com.quartzadvance.entity.SchedulerJobInfo;
 import com.quartzadvance.repository.SchedulerRepository;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
 import org.quartz.impl.matchers.GroupMatcher;
+import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
@@ -16,10 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
+import java.lang.annotation.Annotation;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -69,11 +69,16 @@ public class SchedulerServiceImpl implements SchedulerService {
      * @param jobInfo it represents Job scheduling information.(Ex: timingInfo, JobName etc)
      */
     @Override
-    public void createNewJob(final SchedulerJobInfo jobInfo) {
+    public void createNewJob(SchedulerJobInfo jobInfo) {
         try {
+            SchedulerJobInfo info = schedulerRepository.findByJobName(jobInfo.getJobName());
+            if (info != null) {
+                log.info("This Job Already Exists in Database");
+                jobInfo = info;
+            }
             Scheduler scheduler = schedulerFactoryBean.getScheduler();
 
-            JobDetail jobDetail = JobBuilder.newJob((Class<? extends QuartzJobBean>) jobInfo.getJobClass())
+            JobDetail jobDetail = JobBuilder.newJob(jobInfo.getJobClass())
                     .withIdentity(jobInfo.getJobName(), jobInfo.getJobGroup())
                     .build();
             if (!scheduler.checkExists(jobDetail.getKey())) {
@@ -82,14 +87,13 @@ public class SchedulerServiceImpl implements SchedulerService {
             } else {
                 log.error("scheduleNewJobRequest.jobAlreadyExist");
             }
+
         } catch (ClassNotFoundException e) {
             log.error("Class Not Found - {}", jobInfo.getJobClass(), e);
         } catch (SchedulerException e) {
             log.error(e.getMessage(), e);
         }
     }
-
-
 
     /**
      * It update the job information and reschedule the information into JobStore
@@ -266,7 +270,7 @@ public class SchedulerServiceImpl implements SchedulerService {
         SchedulerJobInfo jobInfo = schedulerRepository.findByJobName(jobName);
         try {
             Scheduler scheduler = schedulerFactoryBean.getScheduler();
-            JobDetail jobDetail = JobBuilder.newJob((Class<? extends QuartzJobBean>) jobInfo.getJobClass())
+            JobDetail jobDetail = JobBuilder.newJob(jobInfo.getJobClass())
                     .withIdentity(jobInfo.getJobName(), jobInfo.getJobGroup()).build();
             if (!scheduler.checkExists(jobDetail.getKey())) {
                 configureSchedule(jobInfo, scheduler, jobDetail);
@@ -303,6 +307,32 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
     }
 
+    @Override
+    public void createJobForAnnotatedBean(String basePackage) {
+        Reflections reflections = new Reflections(basePackage);
+        Set<Class<?>> annotated = reflections.getTypesAnnotatedWith(NishadSchedular.class);
+        SchedulerJobInfo info;
+        for (Class<?> annotatedClass : annotated) {
+            Annotation annotation = annotatedClass.getAnnotation(NishadSchedular.class);
+            NishadSchedular myAnnotation = (NishadSchedular) annotation;
+            info = new SchedulerJobInfo().setCronJob(myAnnotation.cronJob())
+                    .setCronExpression(myAnnotation.cronExpression())
+                    .setJobClass(myAnnotation.jobClass())
+                    .setIsDurable(myAnnotation.isDurable())
+                    .setJobName(myAnnotation.jobName())
+                    .setJobGroup(myAnnotation.jobGroup())
+                    .setInitialOffsetMs(myAnnotation.initialOffsetMs())
+                    .setMisFireInstruction(myAnnotation.misFireInstruction())
+                    .setRepeatTime(myAnnotation.repeatTime())
+                    .setTotalFireCount(myAnnotation.totalFireCount())
+                    .setRunForever(myAnnotation.runForever());
+
+            System.out.println(info);
+            this.createNewJob(info);
+
+        }
+    }
+
     /**
      * configuring schedule for executing jobs and store it into jobstore
      *
@@ -313,8 +343,9 @@ public class SchedulerServiceImpl implements SchedulerService {
      * @throws SchedulerException
      */
     private void configureSchedule(SchedulerJobInfo jobInfo, Scheduler scheduler, JobDetail jobDetail) throws ClassNotFoundException, SchedulerException {
-        jobDetail = scheduleCreator.createJob(jobInfo, false);
+        jobDetail = scheduleCreator.createJob(jobInfo);
         Trigger trigger = configureTrigger(jobInfo);
+        log.info("Starting Job.....");
         scheduler.scheduleJob(jobDetail, trigger);
     }
 
@@ -327,11 +358,9 @@ public class SchedulerServiceImpl implements SchedulerService {
     private Trigger configureTrigger(SchedulerJobInfo jobInfo) {
         Trigger trigger;
         if (jobInfo.getCronJob()) {
-            trigger = scheduleCreator.createCronTrigger(jobInfo.getJobName(), new Date(), jobInfo.getCronExpression(),
-                    SimpleTrigger.MISFIRE_INSTRUCTION_FIRE_NOW);
+            trigger = scheduleCreator.createCronTrigger(jobInfo);
         } else {
-            trigger = scheduleCreator.createSimpleTrigger(jobInfo.getJobName(), new Date(), jobInfo.getRepeatTime(),
-                    SimpleTrigger.MISFIRE_INSTRUCTION_FIRE_NOW);
+            trigger = scheduleCreator.createSimpleTrigger(jobInfo);
         }
         return trigger;
     }

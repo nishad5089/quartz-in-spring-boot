@@ -35,7 +35,9 @@ public class QuartzController {
         schedulerJobInfo.setJobName("email send");
         schedulerJobInfo.setJobClass(SimpleJob.class);
         schedulerJobInfo.setCronJob(false);
+        schedulerJobInfo.setRunForever(true);
         schedulerJobInfo.setJobGroup("Test Job3");
+        System.out.println(schedulerJobInfo);
         schedulerService.createNewJob(schedulerJobInfo);
     }
 

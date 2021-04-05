@@ -1,5 +1,6 @@
 package com.quartzadvance.jobs;
 
+import com.quartzadvance.annotations.NishadSchedular;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -10,6 +11,7 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
  * @since 2021/31/03
  */
 @Slf4j
+@NishadSchedular(jobName = "OTP SMS1", jobGroup = "SMS", jobClass = SimpleJob.class)
 public class SimpleJob extends QuartzJobBean {
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {

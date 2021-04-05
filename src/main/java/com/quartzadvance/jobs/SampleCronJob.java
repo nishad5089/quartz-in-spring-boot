@@ -1,5 +1,6 @@
 package com.quartzadvance.jobs;
 
+import com.quartzadvance.annotations.NishadSchedular;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.JobExecutionContext;
@@ -13,6 +14,7 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
  */
 @Slf4j
 @DisallowConcurrentExecution
+//@NishadSchedular(jobName = "OTP SMS", jobGroup = "SMS", jobClass = SampleCronJob.class, cronExpression = "* * * ? * *", cronJob = true)
 public class SampleCronJob extends QuartzJobBean {
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
