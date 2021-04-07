@@ -391,27 +391,9 @@ public class SchedulerServiceImpl implements SchedulerService {
     }
 
     /**
-     * Find All Jobs that are annotated with CronJob
+     * Find All Jobs that are annotated with SimpleJob or CronJob by Jobtype
      *
-     * @param basePackage For scanning the annotation, you have to provide Basepackage
-     * @return {@link Set<String>}
-     */
-//    @Override
-//    public Set<String> getAllBeanForCronJob(String basePackage) {
-//
-//        Reflections reflections = new Reflections(basePackage);
-//        Set<Class<?>> cronJobs = reflections.getTypesAnnotatedWith(CronJob.class);
-//        Set<String> cronJobsSet = new HashSet<>();
-//        for (Class<?> annotatedClass : cronJobs) {
-//            cronJobsSet.add(annotatedClass.getName());
-//        }
-//        return cronJobsSet;
-//    }
-
-    /**
-     * Find All Jobs that are annotated with SimpleJob
-     *
-     * @param jobType For scanning the annotation, you have to provide Basepackage
+     * @param jobType The type of the Job. Job can have two type SimpleJob or CronJob
      * @return {@link Set<String>}
      */
 
@@ -426,14 +408,61 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
     }
 
+    /**
+     * Create Job For Annotated Bean
+     */
+    public void createJobForAnnotatedBean() {
+        Map<String, Object> simpleJobs = applicationContext.getBeansWithAnnotation(SimpleJob.class);
+        Map<String, Object> cronJobs = applicationContext.getBeansWithAnnotation(CronJob.class);
+        SchedulerJobInfo info;
+
+        for (Object simpleJob : simpleJobs.values()) {
+            Class<?> annotatedClass = simpleJob.getClass();
+            Annotation annotation = annotatedClass.getAnnotation(SimpleJob.class);
+            SimpleJob simpleJobAnnotation = (SimpleJob) annotation;
+            info = new SchedulerJobInfo()
+                    .setJobName(simpleJobAnnotation.jobName())
+                    .setJobGroup(simpleJobAnnotation.jobGroup())
+                    .setRepeatTime(simpleJobAnnotation.repeatTime())
+                    .setRunForever(simpleJobAnnotation.runForever())
+                    .setTotalFireCount(simpleJobAnnotation.totalFireCount())
+                    .setInitialOffsetMs(simpleJobAnnotation.initialOffsetMs())
+                    .setJobClass(annotatedClass.getCanonicalName())
+                    .setMisFireInstruction(simpleJobAnnotation.misFireInstruction())
+                    .setIsDurable(simpleJobAnnotation.isDurable());
+            System.out.println(info);
+            this.createNewJob(info);
+        }
+
+        for (Object cronJob : cronJobs.values()) {
+            Class<?> annotatedClass = cronJob.getClass();
+            Annotation annotation = annotatedClass.getAnnotation(CronJob.class);
+            CronJob cronJobAnnotation = (CronJob) annotation;
+            info = new SchedulerJobInfo()
+                    .setCronJob(cronJobAnnotation.cronJob())
+                    .setCronExpression(cronJobAnnotation.cronExpression())
+                    .setJobClass(annotatedClass.getCanonicalName())
+                    .setIsDurable(cronJobAnnotation.isDurable())
+                    .setInitialOffsetMs(cronJobAnnotation.initialOffsetMs())
+                    .setJobName(cronJobAnnotation.jobName())
+                    .setMisFireInstruction(cronJobAnnotation.misFireInstruction())
+                    .setJobGroup(cronJobAnnotation.jobGroup());
+
+            System.out.println(info);
+            this.createNewJob(info);
+
+        }
+
+    }
+
 
     /**
-     * @param basePackage For scanning the annotation, you have to provide Base-package
+     * Get All Job that are annotated with SimpleJob or CronJob
+     *
      * @return {@link Set<String>}
      */
     @Override
-    public Set<String> getAllJobsByScanningAnnotation(String basePackage) {
-        //  Reflections reflections = new Reflections(basePackage);
+    public Set<String> getAllJobsByScanningAnnotation() {
         Set<String> cronJobs = getCronJobs();
         Set<String> simpleJobs = getSimpleJobs();
         return mergeSet(cronJobs, simpleJobs);
@@ -458,88 +487,23 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     private Set<String> getCronJobs() {
         Set<String> cronJobsSet = new HashSet<>();
-        Map<String, Object> aggregates = applicationContext.getBeansWithAnnotation(CronJob.class);
-        for (Object aggregate : aggregates.values()) {
-            String aggregateType = aggregate.getClass().getCanonicalName();
+        Map<String, Object> cronJobs = applicationContext.getBeansWithAnnotation(CronJob.class);
+        for (Object cronJob : cronJobs.values()) {
+            String aggregateType = cronJob.getClass().getCanonicalName();
             cronJobsSet.add(aggregateType);
         }
         return cronJobsSet;
     }
 
     private Set<String> getSimpleJobs() {
-//        Set<String> simpleJobsSet = new HashSet<>();
-//        Set<Class<?>> simpleJobs = reflections.getTypesAnnotatedWith(SimpleJob.class);
-//        for (Class<?> annotatedClass : simpleJobs) {
-//            simpleJobsSet.add(annotatedClass.getName());
-//        }
-//        return simpleJobsSet;
         Set<String> simpleJobsSet = new HashSet<>();
-        Map<String, Object> aggregates = applicationContext.getBeansWithAnnotation(SimpleJob.class);
-        for (Object aggregate : aggregates.values()) {
-            String aggregateType = aggregate.getClass().getCanonicalName();
+        Map<String, Object> simpleJobs = applicationContext.getBeansWithAnnotation(SimpleJob.class);
+        for (Object simpleJob : simpleJobs.values()) {
+            String aggregateType = simpleJob.getClass().getCanonicalName();
             simpleJobsSet.add(aggregateType);
         }
         return simpleJobsSet;
     }
-
-    /**
-     * @param basePackage For scanning the annotation, you have to provide Base-package
-     */
-    public void createJobForAnnotatedBean(String basePackage) {
-        Reflections reflections = new Reflections(basePackage);
-        Set<Class<?>> cronJobs = reflections.getTypesAnnotatedWith(CronJob.class);
-        Set<Class<?>> simpleJobs = reflections.getTypesAnnotatedWith(SimpleJob.class);
-        SchedulerJobInfo info;
-
-        for (Class<? extends Object> annotatedClass : cronJobs) {
-            Annotation annotation = annotatedClass.getAnnotation(CronJob.class);
-            CronJob myAnnotation = (CronJob) annotation;
-
-            info = new SchedulerJobInfo()
-                    .setCronJob(myAnnotation.cronJob())
-                    .setCronExpression(myAnnotation.cronExpression())
-                    .setJobClass(annotatedClass.getName())
-                    .setIsDurable(myAnnotation.isDurable())
-                    .setInitialOffsetMs(myAnnotation.initialOffsetMs())
-                    .setJobName(myAnnotation.jobName())
-                    .setMisFireInstruction(myAnnotation.misFireInstruction())
-                    .setJobGroup(myAnnotation.jobGroup());
-
-            System.out.println(info);
-            this.createNewJob(info);
-
-        }
-
-        for (Class<? extends Object> annotatedClass : simpleJobs) {
-            Annotation annotation = annotatedClass.getAnnotation(SimpleJob.class);
-            SimpleJob myAnnotation = (SimpleJob) annotation;
-
-            info = new SchedulerJobInfo()
-                    .setJobName(myAnnotation.jobName())
-                    .setJobGroup(myAnnotation.jobGroup())
-                    .setRepeatTime(myAnnotation.repeatTime())
-                    .setRunForever(myAnnotation.runForever())
-                    .setTotalFireCount(myAnnotation.totalFireCount())
-                    .setInitialOffsetMs(myAnnotation.initialOffsetMs())
-                    .setJobClass(annotatedClass.getName())
-                    .setMisFireInstruction(myAnnotation.misFireInstruction())
-                    .setIsDurable(myAnnotation.isDurable());
-            System.out.println(info);
-            this.createNewJob(info);
-        }
-    }
-//    @Override
-//    public Class<?> getPackageInClassFormat(String name){
-//        Class<? extends QuartzJobBean> className = null;
-//        try {
-//            className = (Class<? extends QuartzJobBean>) Class.forName(name);
-//        } catch (ClassNotFoundException e) {
-//            e.printStackTrace();
-//        }
-//        return className;
-//    }
-//
-
 
     /**
      * configuring schedule for executing jobs and store it into jobstore
@@ -572,30 +536,4 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
         return trigger;
     }
-
-
-    /**
-     * Initialize JobStore
-     */
-//    @PostConstruct
-//    public void init() {
-//        try {
-//            schedulerFactoryBean.getScheduler().start();
-//          //  schedulerFactoryBean.getScheduler().getListenerManager().addTriggerListener(new TriggerListener(this));
-//        } catch (SchedulerException e) {
-//            log.error(e.getMessage(), e);
-//        }
-//    }
-//
-//    /**
-//     * Shutdown JobStore
-//     */
-//    @PreDestroy
-//    public void shutdownScheduler() {
-//        try {
-//            schedulerFactoryBean.getScheduler().shutdown();
-//        } catch (SchedulerException e) {
-//            log.error(e.getMessage(), e);
-//        }
-//    }
 }

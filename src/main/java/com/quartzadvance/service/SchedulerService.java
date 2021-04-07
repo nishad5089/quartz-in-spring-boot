@@ -130,23 +130,13 @@ public interface SchedulerService {
 
     /**
      * It creates Jobs for all @SimpleJob, @CronJob annotated class
-     *
-     * @param basePackage For scanning the annotation, you have to provide Basepackage
      */
-    void createJobForAnnotatedBean(String basePackage);
-
-//    /**
-//     * Get all job which are annotated with @CronJob
-//     *
-//     * @param basePackage
-//     * @return {@link Set<String>}
-//     */
-//    Set<String> getAllBeanForCronJob(String basePackage);
+    void createJobForAnnotatedBean();
 
     /**
-     * Get all job which are annotated with @SimpleJob
+     * GFind All Jobs that are annotated with SimpleJob or CronJob by Jobtype
      *
-     * @param basePackage
+     * @param jobType The type of the Job. Job can have two type SimpleJob or CronJob
      * @return {@link Set<String>}
      */
     Set<String> getAllAnnotatedBeanByJobType(String jobType);
@@ -154,9 +144,8 @@ public interface SchedulerService {
     /**
      * Get aLl jobs which are annotated with @SimpleJob or @CronJob
      *
-     * @param basePackage
      * @return {@link Set<String>}
      */
-    Set<String> getAllJobsByScanningAnnotation(String basePackage);
+    Set<String> getAllJobsByScanningAnnotation();
 
 }
