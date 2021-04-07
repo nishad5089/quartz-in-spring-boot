@@ -33,8 +33,8 @@ public class QuartzController {
         SchedulerJobInfo schedulerJobInfo = new SchedulerJobInfo();
         schedulerJobInfo.setRepeatTime(1000L);
         schedulerJobInfo.setJobName("email send");
-        schedulerJobInfo.setJobClass(SimpleJob.class);
-        schedulerJobInfo.setCronJob(false);
+        schedulerJobInfo.setJobClass(SimpleJob.class.getName());
+        // schedulerJobInfo.setTotalFireCount(10);
         schedulerJobInfo.setRunForever(true);
         schedulerJobInfo.setJobGroup("Test Job3");
         System.out.println(schedulerJobInfo);
@@ -74,7 +74,9 @@ public class QuartzController {
     @PutMapping("/update/{jobName}")
     public void updateJob(@PathVariable String jobName) {
         SchedulerJobInfo schedulerJobInfo = repository.findByJobName(jobName);
-        schedulerJobInfo.setRepeatTime(10000L);
+        schedulerJobInfo.setRunForever(false);
+        schedulerJobInfo.setTotalFireCount(10);
+        schedulerJobInfo.setIsDurable(true);
         schedulerService.updateScheduleJob(schedulerJobInfo);
     }
 
@@ -91,5 +93,15 @@ public class QuartzController {
     @GetMapping("stopall")
     public void stopAllJobs() {
         schedulerService.stopAllJobs();
+    }
+
+    @GetMapping("/get-state/{jobName}")
+    public String getJobState(@PathVariable String jobName) {
+        return schedulerService.getJobState(jobName);
+    }
+
+    @GetMapping("/isRunning/{jobName}")
+    public Boolean isJobWithNamePresent(@PathVariable String jobName) {
+        return schedulerService.isJobWithNamePresent(jobName);
     }
 }

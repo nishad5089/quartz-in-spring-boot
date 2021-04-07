@@ -1,10 +1,14 @@
 package com.quartzadvance.entity;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
+import org.quartz.CronTrigger;
 import org.quartz.SimpleTrigger;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
 import javax.persistence.*;
@@ -21,10 +25,12 @@ import java.io.Serializable;
 @Entity
 @ToString
 @Accessors(chain = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Table(name = "scheduler_job_info")
 public class SchedulerJobInfo implements Serializable {
 
     @Id
+    @Setter(AccessLevel.PRIVATE)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -33,7 +39,7 @@ public class SchedulerJobInfo implements Serializable {
 
     private String jobGroup;
 
-    private Class<? extends QuartzJobBean> jobClass;
+    private String jobClass;
 
     private String cronExpression;
 
@@ -47,10 +53,15 @@ public class SchedulerJobInfo implements Serializable {
     private Boolean cronJob = false;
 
     @Column(nullable = false)
-    private Boolean runForever = true;
+    private Boolean runForever = false;
 
     @Column(nullable = false)
-    private Integer misFireInstruction = SimpleTrigger.MISFIRE_INSTRUCTION_FIRE_NOW;
+    private Integer misFireInstruction = SimpleTrigger.MISFIRE_INSTRUCTION_SMART_POLICY;
 
     private Boolean isDurable = false;
+
+    @Value("${spring.application.name}")
+    private String applicationName;
+
+    private String description;
 }

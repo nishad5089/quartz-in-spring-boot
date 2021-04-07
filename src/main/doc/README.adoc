@@ -1,11 +1,8 @@
+= Scheduler
+:description: Quartz with Spring boot.
+:keywords: java, oop, programming, spring, quartz.
 
-== Quartz Enterprise Job Scheduler
-:stylesheet: dark.css
-:nofooter:
-:source-highlighter: highlightjs
-
- What is the Quartz Job Scheduling Library?
-
+[abstract]
 Quartz is a richly featured, open source job scheduling library that can be integrated within virtually any Java application - from the smallest stand-alone application to
 the largest e-commerce system. Quartz can be used to create
 simple or complex schedules for executing tens, hundreds, or even
@@ -15,9 +12,10 @@ The Quartz Scheduler includes many enterprise-class features, such as
 support for JTA transactions and clustering.
 
 === Features
+
 *Runtime Environments*
 
-* Quartz can run embedded within another free standing application
+* Quartz can run embedded within another free-standing application
 
 * Quartz can be instantiated within an application server (or servlet container), and participate in XA transactions
 
@@ -25,21 +23,25 @@ support for JTA transactions and clustering.
 
 * Quartz can be instantiated as a cluster of stand-alone programs (with load-balance and fail-over capabilities) for the execution of jobs
 
+==== installation
+. Need Dependency of Quartz scheduler
+. JDK > 8
+
+==== Configuration
+
 === Create Quartz Job.
 
- * `@param` SchedulerJobInfo it represents Job scheduling information.
- * `@param` isDurable Job needs to be persisted even after completion. if true, job will be persisted, not otherwise.
- * `@return` JobDetail object
+Create Quartz Job.
 
 .Click to see the code
 [%collapsible]
 ====
 [,java]
 ----
-    public JobDetail createJob(SchedulerJobInfo jobInfo, boolean isDurable) throws ClassNotFoundException {
+     public JobDetail createJob(SchedulerJobInfo jobInfo) throws ClassNotFoundException {
         JobDetailFactoryBean factoryBean = new JobDetailFactoryBean();
-        factoryBean.setJobClass((Class<? extends QuartzJobBean>) jobInfo.getJobClass());
-        factoryBean.setDurability(isDurable);
+        factoryBean.setJobClass((Class<? extends QuartzJobBean>) Class.forName(jobInfo.getJobClass()));
+        factoryBean.setDurability(jobInfo.getIsDurable());
         factoryBean.setName(jobInfo.getJobName());
         factoryBean.setGroup(jobInfo.getJobGroup());
         JobDataMap jobDataMap = new JobDataMap();
@@ -53,28 +55,22 @@ support for JTA transactions and clustering.
 
 === Create cron trigger
 
- * `@param` triggerName        Trigger name.
- * `@param` startTime          Trigger start time.
- * `@param` cronExpression     Cron expression.
- * `@param` misFireInstruction Misfire instruction (what to do in case of misfire happens).
- * `@return` { @link CronTrigger }
+Create cron trigger
 
 .Click to see the code
 [%collapsible]
 ====
 [,java]
 ----
-    public CronTrigger createCronTrigger(String triggerName, Date startTime, String cronExpression, int misFireInstruction) {
-        CronTriggerFactoryBean factoryBean = new CronTriggerFactoryBean();
-        factoryBean.setName(triggerName);
-        factoryBean.setStartTime(startTime);
-        factoryBean.setCronExpression(cronExpression);
-        factoryBean.setMisfireInstruction(misFireInstruction);
-        try {
-            factoryBean.afterPropertiesSet();
-        } catch (ParseException e) {
-            log.error(e.getMessage(), e);
-        }
+     public SimpleTrigger createSimpleTrigger(SchedulerJobInfo info) {
+        SimpleTriggerFactoryBean factoryBean = new SimpleTriggerFactoryBean();
+        factoryBean.setName(info.getJobName());
+        factoryBean.setStartTime(new Date(System.currentTimeMillis()));
+        factoryBean.setRepeatInterval(info.getRepeatTime());
+        factoryBean.setRepeatCount(info.getRunForever() ? SimpleTrigger.REPEAT_INDEFINITELY : info.getTotalFireCount() - 1);
+        factoryBean.setMisfireInstruction(info.getMisFireInstruction());
+        factoryBean.setDescription(info.getDescription());
+        factoryBean.afterPropertiesSet();
         return factoryBean.getObject();
     }
 ----
@@ -82,134 +78,186 @@ support for JTA transactions and clustering.
 
 === Create simple trigger.
 
- * *@param* triggerName        Trigger name.
- * *@param* startTime          Trigger start time.
- * *@param* repeatTime         Job repeat period mills
- * *@param* misFireInstruction Misfire instruction (what to do in case of misfire happens).
- * *@return* {@link SimpleTrigger}
+Create simple trigger.
 
 .Click to see the code
 [%collapsible]
 ====
 [,java]
 ----
-   public SimpleTrigger createSimpleTrigger(String triggerName, Date startTime, Long repeatTime, int misFireInstruction) {
+      public SimpleTrigger createSimpleTrigger(SchedulerJobInfo info) {
         SimpleTriggerFactoryBean factoryBean = new SimpleTriggerFactoryBean();
-        factoryBean.setName(triggerName);
-        factoryBean.setStartTime(startTime);
-        factoryBean.setRepeatInterval(repeatTime);
-        factoryBean.setRepeatCount(SimpleTrigger.REPEAT_INDEFINITELY);
-        factoryBean.setMisfireInstruction(misFireInstruction);
+        factoryBean.setName(info.getJobName());
+        factoryBean.setStartTime(new Date(System.currentTimeMillis()));
+        factoryBean.setRepeatInterval(info.getRepeatTime());
+        factoryBean.setRepeatCount(info.getRunForever() ? SimpleTrigger.REPEAT_INDEFINITELY : info.getTotalFireCount() - 1);
+        factoryBean.setMisfireInstruction(info.getMisFireInstruction());
+        factoryBean.setDescription(info.getDescription());
         factoryBean.afterPropertiesSet();
         return factoryBean.getObject();
     }
 ----
 ====
-
 === Available Method to call
 
 ==== Start All Job
 
- . It start All the job schedulers that in the database amd it store jobs into jobstore temporarily
+. It start All the job schedulers that in the database amd it store jobs into jobstore temporarily
 
     void startAllSchedulers();
 
 ==== Create New Job
 
- . It Creates New Job And Switch job to JobStore from persistence table
+. It Creates New Job And Switch job to JobStore from persistence table
 
- . `@param` jobInfo it represents Job scheduling information.(Ex: timingInfo, JobName etc)
+. `@param jobInfo` it represents Job scheduling information.(Ex: timingInfo, JobName etc)
 
     void createNewJob(final SchedulerJobInfo jobInfo);
 
 ==== Update Job
-     . It updates the job information and reschedule the information into JobStore
+. It updates the job information and reschedule the information into JobStore
 
-     . `@param` jobInfo it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).
+. `@param jobInfo` it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).
 
    void updateScheduleJob(final SchedulerJobInfo jobInfo);
 
 ==== Un-Schedule Job
-     * It takes JobName and removes the job from the JobStore, and it can only remove single trigger that is associate with a specific job.
-
-     * `@param` jobName Name of the running job which need to be unscheduled
-     * `@return {@code true}` if the job successfully un-schedule,
-     * `{@code false}` if the job don't un-schedule
+. Remove the indicated Trigger from the scheduler.
+. If the related job does not have any other triggers, and the job is not durable, then the job will also be deleted.
+. `@param jobName` Name of the running job which need to be unscheduled
+. `@return {@code true}` if the job successfully un-schedule,
+. `{@code false}` if the job don't un-schedule
 
     boolean unScheduleJob(final String jobName);
 
 ==== Stop Job
-     . loops through all the triggers having a reference to this job, to un-schedule them
+. loops through all the triggers having a reference to this job, to un-schedule them
 
-     . `@param` jobName it represent a running job name which need to be stopped
-     . `@return {@code true}` if the job successfully deleted,
-     . `{@code false}` if the job don't delete
+. `@param jobName` it represent a running job name which need to be stopped
+. `@return {@code true}` if the job successfully deleted,
+. `{@code false}` if the job don't delete
 
     boolean stopJob(final String jobName);
 
 ==== Stop All Jobs
-     . it stops All the Running jobs.
+. it stops All the Running jobs.
 
     void stopAllJobs();
 
 ==== Pause Job
 
-     . It pauses the currently running job.
-     . Job must have in jobstore
+. It pauses the currently running job.
+. Job must have in jobstore
 
-     . `@param` jobName it represent a running job name which need to be paused.
-     . `@return {@code true}` if the job successfully pause,
-     . `{@code false}` if the job don't pause
+. `@param jobName` it represent a running job name which need to be paused.
+. `@return {@code true}` if the job successfully pause,
+. `{@code false}` if the job don't pause
 
     boolean pauseJob(final String jobName);
 
 ==== Resume Job
 
-     . It resumes the pausing jobs and job start running again
-     . Job must have in jobstore.
-     . `@param` jobName it represent a running job name which need to be resume
-     . `@return {@code true}` if the job successfully resume,
-     . `{@code false}` if the job don't resume
+. It resumes the pausing jobs and job start running again
+. Job must have in jobstore.
+. `@param jobName` it represent a running job name which need to be resume
+. `@return {@code true}` if the job successfully resume,
+. `{@code false}` if the job don't resume
 
     boolean resumeJob(final String jobName);
 
 ==== Immediate Trigger Job
 
-     * if there is needed any Immediate trigger to a particular job then this method can be called
-     * Job must have in jobstore for calling this method
-
-     * `@param` jobName it represents a running job name which need to be trigger instantly.
-     * `@return {@code true}` if the job successfully start,
-     * `{@code false}` if the job don't start
+. if there is needed any Immediate trigger to a particular job then this method can be called
+. Job must have in jobstore for calling this method
+. `@param jobName` it represents a running job name which need to be trigger instantly.
+. `@return {@code true}` if the job successfully start,
+. `{@code false}` if the job don't start
 
     boolean triggerJobNow(final String jobName);
 
 ==== Start Job
 
-     . Add the given job to the Scheduler, if it doesn't already exist.
-     . `@param` jobName it represents the jobName which need to be added.
-     . `@return {@code true}` if the job was actually added,
-     . `{@code false}` if it already existed before
+. Add the given job to the Scheduler, if it doesn't already exist.
+. `@param jobName` it represents the jobName which need to be added.
+. `@return {@code true}` if the job was actually added,
+. `{@code false}` if it already existed before
 
     boolean startJob(final String jobName);
 
 ==== Find All Running Jobs Details
 
-     * It fetches all the job from jobstore with any group
-     * Job must have in jobstore for calling this method
-
-     * `@return {@link SchedulerJobInfo}` it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).
+. It fetches all the job from jobstore with any group
+. Job must have in jobstore for calling this method
+. `@return {@link SchedulerJobInfo}` it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).
 
     List<SchedulerJobInfo> getAllRunningJobs();
 
 ==== Get Job by Name
 
-     * Find single Job details by Job Name
-     * Job must have in jobstore for calling this method
-
-     * `@param` jobName it represents a running job name by which we can find Job scheduling information
-     * `@return {@link SchedulerJobInfo}` it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).
+. Find single Job details by Job Name
+. Job must have in jobstore for calling this method
+. `@param jobName` it represents a running job name by which we can find Job scheduling information
+. `@return {@link SchedulerJobInfo}` it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).
 
     SchedulerJobInfo getRunningJob(final String jobName);
 
+==== Check Job
+
+. Check job exist with given name
+. `@param jobName` it represents the jobName is running or not.
+. `@return {@code true}` if the job is running.
+. `{@code false}` if the job is not running.
+
+    boolean isJobWithNamePresent(String jobName);
+
+
+==== Check State
+. Get the current state of the job
+. `@param jobName` it represents the jobName for which job the status need to be checked.
+. `@return {@link String}`
+
+    String getJobState(String jobName);
+
+
+==== Create Job By Annotation
+. It creates Jobs for all `@SimpleJob`, `@CronJob` annotated class
+. `@param basePackage` For scanning the annotation, you have to provide Basepackage
+
+    void createJobForAnnotatedBean(String basePackage);
+
+==== Get All Jobs With `@CronJob` Annotation
+. Get all jobs which are annotated with `@CronJob`
+. `@param basePackage` For scanning the annotation, you have to provide Basepackage
+. `@return {@link Set<String>}`
+
+    Set<String> getAllBeanForCronJob(String basePackage);
+
+==== Get All Jobs With `@SimpleJob` Annotation
+. Get all job which are annotated with `@SimpleJob`
+. `@param basePackage` For scanning the annotation, you have to provide Basepackage
+. `@return {@link Set<String>}`
+
+    Set<String> getAllBeanForSimpleJob(String basePackage);
+
+==== Get All Jobs Which Annotated With `@SimpleJob` or `@CronJob`  Annotation
+. Get aLl jobs which are annotated with `@SimpleJob` or `@CronJob`
+. `@param basePackage` For scanning the annotation, you have to provide Basepackage
+. `@return {@link Set<String>}`
+
+    Set<String> getAllJobsByScanningAnnotation(String basePackage);
+
+
+
+== Additional Resources
+
+=== Read
+
+* http://www.quartz-scheduler.org/documentation/2.4.0-SNAPSHOT/quick-start-guide.html#starting-a-sample-application[Quartz Official Website, window="_blank"]
+
+[bibliography]
+== References
+
+* [[[bb-ant,1]]] Quartz Scheduler. http://www.quartz-scheduler.org/documentation/2.4.0-SNAPSHOT/quick-start-guide.html#starting-a-sample-application[Official Website]
+* [[[bb-ant,3]]] Scheduling in Spring with Quartz. https://www.baeldung.com/spring-quartz-schedule[Baeldung]
+* [[[bb-ant,3]]] Quartz Scheduler. https://docs.spring.io/spring-boot/docs/2.0.0.M3/reference/html/boot-features-quartz.html[docs.spring.io]
 

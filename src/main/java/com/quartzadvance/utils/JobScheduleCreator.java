@@ -23,12 +23,12 @@ public class JobScheduleCreator {
     /**
      * Create Quartz Job.
      *
-     * @param SchedulerJobInfo it represents Job scheduling information.
+     * @param jobInfo it represents Job scheduling information.
      * @return JobDetail object
      */
     public JobDetail createJob(SchedulerJobInfo jobInfo) throws ClassNotFoundException {
         JobDetailFactoryBean factoryBean = new JobDetailFactoryBean();
-        factoryBean.setJobClass(jobInfo.getJobClass());
+        factoryBean.setJobClass((Class<? extends QuartzJobBean>) Class.forName(jobInfo.getJobClass()));
         factoryBean.setDurability(jobInfo.getIsDurable());
         factoryBean.setName(jobInfo.getJobName());
         factoryBean.setGroup(jobInfo.getJobGroup());
@@ -77,6 +77,7 @@ public class JobScheduleCreator {
         factoryBean.setStartTime(new Date(System.currentTimeMillis() + info.getInitialOffsetMs()));
         factoryBean.setCronExpression(info.getCronExpression());
         factoryBean.setMisfireInstruction(info.getMisFireInstruction());
+        factoryBean.setDescription(info.getDescription());
         try {
             factoryBean.afterPropertiesSet();
         } catch (ParseException e) {
@@ -115,10 +116,11 @@ public class JobScheduleCreator {
     public SimpleTrigger createSimpleTrigger(SchedulerJobInfo info) {
         SimpleTriggerFactoryBean factoryBean = new SimpleTriggerFactoryBean();
         factoryBean.setName(info.getJobName());
-        factoryBean.setStartTime(new Date(System.currentTimeMillis() + info.getInitialOffsetMs()));
+        factoryBean.setStartTime(new Date(System.currentTimeMillis()));
         factoryBean.setRepeatInterval(info.getRepeatTime());
         factoryBean.setRepeatCount(info.getRunForever() ? SimpleTrigger.REPEAT_INDEFINITELY : info.getTotalFireCount() - 1);
         factoryBean.setMisfireInstruction(info.getMisFireInstruction());
+        factoryBean.setDescription(info.getDescription());
         factoryBean.afterPropertiesSet();
         return factoryBean.getObject();
     }

@@ -1,6 +1,7 @@
 package com.quartzadvance.service.impl;
 
-import com.quartzadvance.annotations.NishadSchedular;
+import com.quartzadvance.annotations.CronJob;
+import com.quartzadvance.annotations.SimpleJob;
 import com.quartzadvance.utils.JobScheduleCreator;
 import com.quartzadvance.entity.SchedulerJobInfo;
 import com.quartzadvance.repository.SchedulerRepository;
@@ -11,6 +12,7 @@ import org.quartz.*;
 import org.quartz.impl.matchers.GroupMatcher;
 import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+
 import java.lang.annotation.Annotation;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -48,7 +51,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             Scheduler scheduler = schedulerFactoryBean.getScheduler();
             jobInfoList.forEach(jobInfo -> {
                 try {
-                    JobDetail jobDetail = JobBuilder.newJob((Class<? extends QuartzJobBean>) jobInfo.getJobClass())
+                    JobDetail jobDetail = JobBuilder.newJob((Class<? extends QuartzJobBean>) Class.forName(jobInfo.getJobClass()))
                             .withIdentity(jobInfo.getJobName(), jobInfo.getJobGroup()).build();
                     if (!scheduler.checkExists(jobDetail.getKey())) {
                         this.configureSchedule(jobInfo, scheduler, jobDetail);
@@ -78,7 +81,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             }
             Scheduler scheduler = schedulerFactoryBean.getScheduler();
 
-            JobDetail jobDetail = JobBuilder.newJob(jobInfo.getJobClass())
+            JobDetail jobDetail = JobBuilder.newJob((Class<? extends QuartzJobBean>) Class.forName(jobInfo.getJobClass()))
                     .withIdentity(jobInfo.getJobName(), jobInfo.getJobGroup())
                     .build();
             if (!scheduler.checkExists(jobDetail.getKey())) {
@@ -112,7 +115,8 @@ public class SchedulerServiceImpl implements SchedulerService {
     }
 
     /**
-     * It takes JobName and removes the job from the JobStore
+     * Remove the indicated Trigger from the scheduler.
+     * If the related job does not have any other triggers, and the job is not durable, then the job will also be deleted.
      *
      * @param jobName Name of the running job which need to be unscheduled
      * @return {@code true} if the job successfully un-schedule,
@@ -268,9 +272,12 @@ public class SchedulerServiceImpl implements SchedulerService {
     @Override
     public boolean startJob(final String jobName) {
         SchedulerJobInfo jobInfo = schedulerRepository.findByJobName(jobName);
+        if (jobInfo == null) {
+            return false;
+        }
         try {
             Scheduler scheduler = schedulerFactoryBean.getScheduler();
-            JobDetail jobDetail = JobBuilder.newJob(jobInfo.getJobClass())
+            JobDetail jobDetail = JobBuilder.newJob((Class<? extends QuartzJobBean>) Class.forName(jobInfo.getJobClass()))
                     .withIdentity(jobInfo.getJobName(), jobInfo.getJobGroup()).build();
             if (!scheduler.checkExists(jobDetail.getKey())) {
                 configureSchedule(jobInfo, scheduler, jobDetail);
@@ -307,31 +314,192 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
     }
 
+    /**
+     * Check job exist with given name
+     *
+     * @param jobName jobName it represent the jobName is running or not.
+     * @return {@code true} if the job is running.
+     * {@code false} if the job is not running.
+     */
     @Override
+    public boolean isJobWithNamePresent(String jobName) {
+        SchedulerJobInfo jobInfo = schedulerRepository.findByJobName(jobName);
+        if (jobInfo == null) {
+            return false;
+        }
+        try {
+            Scheduler scheduler = schedulerFactoryBean.getScheduler();
+            JobDetail jobDetail = JobBuilder.newJob((Class<? extends QuartzJobBean>) Class.forName(jobInfo.getJobClass()))
+                    .withIdentity(jobInfo.getJobName(), jobInfo.getJobGroup()).build();
+            if (scheduler.checkExists(jobDetail.getKey())) {
+                return true;
+            }
+        } catch (ClassNotFoundException e) {
+            log.error("Class Not Found - {}", jobInfo.getJobClass(), e);
+        } catch (SchedulerException e) {
+            System.out.println("SchedulerException while checking job with name and group exist:" + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    /**
+     * Get the current state of job
+     *
+     * @param jobName jobName it represent the jobName which status need to be checked.
+     * @return {@link String}
+     */
+    public String getJobState(String jobName) {
+        SchedulerJobInfo jobInfo = schedulerRepository.findByJobName(jobName);
+        if (jobInfo == null) {
+            return "There is no job in Database named {} " + jobName;
+        }
+        try {
+            Scheduler scheduler = schedulerFactoryBean.getScheduler();
+            JobDetail jobDetail = JobBuilder.newJob((Class<? extends QuartzJobBean>) Class.forName(jobInfo.getJobClass()))
+                    .withIdentity(jobInfo.getJobName(), jobInfo.getJobGroup()).build();
+
+            List<? extends Trigger> triggers = scheduler.getTriggersOfJob(jobDetail.getKey());
+            if (triggers != null && triggers.size() > 0) {
+                for (Trigger trigger : triggers) {
+                    Trigger.TriggerState triggerState = scheduler.getTriggerState(trigger.getKey());
+
+                    if (Trigger.TriggerState.PAUSED.equals(triggerState)) {
+                        return "PAUSED";
+                    } else if (Trigger.TriggerState.BLOCKED.equals(triggerState)) {
+                        return "BLOCKED";
+                    } else if (Trigger.TriggerState.COMPLETE.equals(triggerState)) {
+                        return "COMPLETE";
+                    } else if (Trigger.TriggerState.ERROR.equals(triggerState)) {
+                        return "ERROR";
+                    } else if (Trigger.TriggerState.NONE.equals(triggerState)) {
+                        return "NONE";
+                    } else if (Trigger.TriggerState.NORMAL.equals(triggerState)) {
+                        return "SCHEDULED";
+                    }
+                }
+            }
+        } catch (ClassNotFoundException e) {
+            log.error("Class Not Found - {}", jobInfo.getJobClass(), e);
+        } catch (SchedulerException e) {
+            System.out.println("SchedulerException while checking job with name and group exist:" + e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
+     * Find All Jobs that are annotated with CronJob
+     *
+     * @param basePackage For scanning the annotation, you have to provide Basepackage
+     * @return {@link Set<String>}
+     */
+    @Override
+    public Set<String> getAllBeanForCronJob(String basePackage) {
+        Reflections reflections = new Reflections(basePackage);
+        Set<Class<?>> cronJobs = reflections.getTypesAnnotatedWith(CronJob.class);
+        Set<String> cronJobsSet = new HashSet<>();
+        for (Class<?> annotatedClass : cronJobs) {
+            cronJobsSet.add(annotatedClass.getName());
+        }
+        return cronJobsSet;
+    }
+
+    /**
+     * Find All Jobs that are annotated with SimpleJob
+     *
+     * @param basePackage For scanning the annotation, you have to provide Basepackage
+     * @return {@link Set<String>}
+     */
+
+    @Override
+    public Set<String> getAllBeanForSimpleJob(String basePackage) {
+        Reflections reflections = new Reflections(basePackage);
+        Set<Class<?>> simpleJobs = reflections.getTypesAnnotatedWith(SimpleJob.class);
+        Set<String> simpleJobsSet = new HashSet<>();
+        for (Class<?> annotatedClass : simpleJobs) {
+            simpleJobsSet.add(annotatedClass.getSimpleName());
+        }
+        return simpleJobsSet;
+    }
+
+    /**
+     * @param basePackage For scanning the annotation, you have to provide Basepackage
+     * @return {@link Set<String>}
+     */
+    @Override
+    public Set<String> getAllJobsByScanningAnnotation(String basePackage) {
+        Reflections reflections = new Reflections(basePackage);
+        Set<Class<?>> cronJobs = reflections.getTypesAnnotatedWith(CronJob.class);
+        Set<Class<?>> simpleJobs = reflections.getTypesAnnotatedWith(SimpleJob.class);
+        Set<String> allJobs = new HashSet<>();
+        for (Class<?> annotatedClass : simpleJobs) {
+            allJobs.add(annotatedClass.getName());
+        }
+        for (Class<?> annotatedClass : cronJobs) {
+            allJobs.add(annotatedClass.getName());
+        }
+        return allJobs;
+    }
+
+    /**
+     * @param basePackage For scanning the annotation, you have to provide Basepackage
+     */
     public void createJobForAnnotatedBean(String basePackage) {
         Reflections reflections = new Reflections(basePackage);
-        Set<Class<?>> annotated = reflections.getTypesAnnotatedWith(NishadSchedular.class);
+        Set<Class<?>> cronJobs = reflections.getTypesAnnotatedWith(CronJob.class);
+        Set<Class<?>> simpleJobs = reflections.getTypesAnnotatedWith(SimpleJob.class);
         SchedulerJobInfo info;
-        for (Class<?> annotatedClass : annotated) {
-            Annotation annotation = annotatedClass.getAnnotation(NishadSchedular.class);
-            NishadSchedular myAnnotation = (NishadSchedular) annotation;
-            info = new SchedulerJobInfo().setCronJob(myAnnotation.cronJob())
+
+        for (Class<? extends Object> annotatedClass : cronJobs) {
+            Annotation annotation = annotatedClass.getAnnotation(CronJob.class);
+            CronJob myAnnotation = (CronJob) annotation;
+
+            info = new SchedulerJobInfo()
+                    .setCronJob(myAnnotation.cronJob())
                     .setCronExpression(myAnnotation.cronExpression())
-                    .setJobClass(myAnnotation.jobClass())
+                    .setJobClass(annotatedClass.getName())
                     .setIsDurable(myAnnotation.isDurable())
-                    .setJobName(myAnnotation.jobName())
-                    .setJobGroup(myAnnotation.jobGroup())
                     .setInitialOffsetMs(myAnnotation.initialOffsetMs())
+                    .setJobName(myAnnotation.jobName())
                     .setMisFireInstruction(myAnnotation.misFireInstruction())
-                    .setRepeatTime(myAnnotation.repeatTime())
-                    .setTotalFireCount(myAnnotation.totalFireCount())
-                    .setRunForever(myAnnotation.runForever());
+                    .setJobGroup(myAnnotation.jobGroup());
 
             System.out.println(info);
             this.createNewJob(info);
 
         }
+
+        for (Class<? extends Object> annotatedClass : simpleJobs) {
+            Annotation annotation = annotatedClass.getAnnotation(SimpleJob.class);
+            SimpleJob myAnnotation = (SimpleJob) annotation;
+
+            info = new SchedulerJobInfo()
+                    .setJobName(myAnnotation.jobName())
+                    .setJobGroup(myAnnotation.jobGroup())
+                    .setRepeatTime(myAnnotation.repeatTime())
+                    .setRunForever(myAnnotation.runForever())
+                    .setTotalFireCount(myAnnotation.totalFireCount())
+                    .setInitialOffsetMs(myAnnotation.initialOffsetMs())
+                    .setJobClass(annotatedClass.getName())
+                    .setMisFireInstruction(myAnnotation.misFireInstruction())
+                    .setIsDurable(myAnnotation.isDurable());
+            System.out.println(info);
+            this.createNewJob(info);
+        }
     }
+//    @Override
+//    public Class<?> getPackageInClassFormat(String name){
+//        Class<? extends QuartzJobBean> className = null;
+//        try {
+//            className = (Class<? extends QuartzJobBean>) Class.forName(name);
+//        } catch (ClassNotFoundException e) {
+//            e.printStackTrace();
+//        }
+//        return className;
+//    }
+//
+
 
     /**
      * configuring schedule for executing jobs and store it into jobstore
@@ -365,27 +533,29 @@ public class SchedulerServiceImpl implements SchedulerService {
         return trigger;
     }
 
+
     /**
      * Initialize JobStore
      */
-    @PostConstruct
-    public void init() {
-        try {
-            schedulerFactoryBean.getScheduler().start();
-        } catch (SchedulerException e) {
-            log.error(e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Shutdown JobStore
-     */
-    @PreDestroy
-    public void shutdownScheduler() {
-        try {
-            schedulerFactoryBean.getScheduler().shutdown();
-        } catch (SchedulerException e) {
-            log.error(e.getMessage(), e);
-        }
-    }
+//    @PostConstruct
+//    public void init() {
+//        try {
+//            schedulerFactoryBean.getScheduler().start();
+//          //  schedulerFactoryBean.getScheduler().getListenerManager().addTriggerListener(new TriggerListener(this));
+//        } catch (SchedulerException e) {
+//            log.error(e.getMessage(), e);
+//        }
+//    }
+//
+//    /**
+//     * Shutdown JobStore
+//     */
+//    @PreDestroy
+//    public void shutdownScheduler() {
+//        try {
+//            schedulerFactoryBean.getScheduler().shutdown();
+//        } catch (SchedulerException e) {
+//            log.error(e.getMessage(), e);
+//        }
+//    }
 }

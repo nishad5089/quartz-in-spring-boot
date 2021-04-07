@@ -3,6 +3,7 @@ package com.quartzadvance.service;
 import com.quartzadvance.entity.SchedulerJobInfo;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author Abdur Rahim Nishad
@@ -30,7 +31,8 @@ public interface SchedulerService {
     void updateScheduleJob(final SchedulerJobInfo jobInfo);
 
     /**
-     * It takes JobName and removes the job from the JobStore
+     * Remove the indicated Trigger from the scheduler.
+     * If the related job does not have any other triggers, and the job is not durable, then the job will also be deleted.
      *
      * @param jobName Name of the running job which need to be unscheduled
      * @return {@code true} if the job successfully un-schedule,
@@ -100,6 +102,23 @@ public interface SchedulerService {
     List<SchedulerJobInfo> getAllRunningJobs();
 
     /**
+     * Check job exist with given name
+     *
+     * @param jobName jobName it represent the jobName is running or not.
+     * @return {@code true} if the job is running.
+     * {@code false} if the job is not running.
+     */
+    boolean isJobWithNamePresent(String jobName);
+
+    /**
+     * Get the current state of the job
+     *
+     * @param jobName jobName it represent the jobName for which job the status need to be checked.
+     * @return {@link String}
+     */
+    String getJobState(String jobName);
+
+    /**
      * Find single Job by Job Name
      * Job must have in jobstore for calling this method
      *
@@ -109,9 +128,34 @@ public interface SchedulerService {
     SchedulerJobInfo getRunningJob(final String jobName);
 
     /**
+     * It creates Jobs for all @SimpleJob, @CronJob annotated class
      *
-     * @param basePackage
+     * @param basePackage For scanning the annotation, you have to provide Basepackage
      */
     void createJobForAnnotatedBean(String basePackage);
+
+    /**
+     * Get all job which are annotated with @CronJob
+     *
+     * @param basePackage
+     * @return {@link Set<String>}
+     */
+    Set<String> getAllBeanForCronJob(String basePackage);
+
+    /**
+     * Get all job which are annotated with @SimpleJob
+     *
+     * @param basePackage
+     * @return {@link Set<String>}
+     */
+    Set<String> getAllBeanForSimpleJob(String basePackage);
+
+    /**
+     * Get aLl jobs which are annotated with @SimpleJob or @CronJob
+     *
+     * @param basePackage
+     * @return {@link Set<String>}
+     */
+    Set<String> getAllJobsByScanningAnnotation(String basePackage);
 
 }

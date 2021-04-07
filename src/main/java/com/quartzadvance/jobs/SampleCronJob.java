@@ -1,10 +1,9 @@
 package com.quartzadvance.jobs;
 
-import com.quartzadvance.annotations.NishadSchedular;
+import com.quartzadvance.annotations.CronJob;
+
 import lombok.extern.slf4j.Slf4j;
-import org.quartz.DisallowConcurrentExecution;
-import org.quartz.JobExecutionContext;
-import org.quartz.JobExecutionException;
+import org.quartz.*;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
 
@@ -14,8 +13,10 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
  */
 @Slf4j
 @DisallowConcurrentExecution
-//@NishadSchedular(jobName = "OTP SMS", jobGroup = "SMS", jobClass = SampleCronJob.class, cronExpression = "* * * ? * *", cronJob = true)
-public class SampleCronJob extends QuartzJobBean {
+@CronJob(jobName = "OTP SMS", jobGroup = "SMS", cronExpression = "* * * ? * *")
+//@CronJob(job = @Job(jobName = "Email", jobGroup = "SMS"), cronExpression = "* * * ? * *")
+//@CronJob
+public class SampleCronJob extends QuartzJobBean implements InterruptableJob {
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
         log.info("SampleCronJob Start................");
@@ -28,5 +29,10 @@ public class SampleCronJob extends QuartzJobBean {
 //            }
 //        });
 //        log.info("SampleCronJob End................");
+    }
+
+    @Override
+    public void interrupt() throws UnableToInterruptJobException {
+        System.out.println("Stopping thread... ");
     }
 }

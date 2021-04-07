@@ -1,27 +1,22 @@
 package com.quartzadvance.annotations;
 
 import org.quartz.SimpleTrigger;
-import org.springframework.scheduling.quartz.QuartzJobBean;
 
 import java.lang.annotation.*;
 
 /**
  * @author Abdur Rahim Nishad
- * @since 2021/04/04
+ * @since 2021/05/04
  */
+
 @Documented
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface NishadSchedular {
-    String jobName();
+public @interface SimpleJob {
 
-    String jobGroup();
+    String jobName() default "";
 
-    Class<? extends QuartzJobBean> jobClass();
-
-    String cronExpression() default "";
-
-    boolean cronJob() default false;
+    String jobGroup() default "";
 
     long repeatTime() default 1000L;
 
@@ -29,8 +24,9 @@ public @interface NishadSchedular {
 
     long initialOffsetMs() default 1000L;
 
-
     boolean runForever() default true;
+
+//    Job job();
 
     int misFireInstruction() default SimpleTrigger.MISFIRE_INSTRUCTION_FIRE_NOW;
 
