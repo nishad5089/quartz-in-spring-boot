@@ -14,8 +14,7 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
 @com.quartzadvance.annotations.SimpleJob(jobName = "OTP SMS1", jobGroup = "SMS")
 //@com.quartzadvance.annotations.SimpleJob(job = @Job(jobName = "OTP SMS", jobGroup = "SMS"))
 //@com.quartzadvance.annotations.SimpleJob
-//@CronJob()
-public class SimpleJob extends QuartzJobBean {
+public class EmailJob extends QuartzJobBean {
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
         log.info("SimpleJob Start................11");

@@ -9,10 +9,13 @@ import com.quartzadvance.service.SchedulerService;
 import com.quartzadvance.utils.JobScheduleCreator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.quartz.*;
 import org.quartz.impl.matchers.GroupMatcher;
 import org.reflections.Reflections;
+import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Service;
@@ -37,6 +40,8 @@ public class SchedulerServiceImpl implements SchedulerService {
     private final SchedulerRepository schedulerRepository;
 
     private final JobScheduleCreator scheduleCreator;
+
+    private final ApplicationContext applicationContext;
 
     /**
      * It start All the job schedulers that in the database amd it store job into jobstore temporarily
@@ -391,57 +396,94 @@ public class SchedulerServiceImpl implements SchedulerService {
      * @param basePackage For scanning the annotation, you have to provide Basepackage
      * @return {@link Set<String>}
      */
-    @Override
-    public Set<String> getAllBeanForCronJob(String basePackage) {
-
-        Reflections reflections = new Reflections(basePackage);
-        Set<Class<?>> cronJobs = reflections.getTypesAnnotatedWith(CronJob.class);
-        Set<String> cronJobsSet = new HashSet<>();
-        for (Class<?> annotatedClass : cronJobs) {
-            cronJobsSet.add(annotatedClass.getName());
-        }
-        return cronJobsSet;
-    }
+//    @Override
+//    public Set<String> getAllBeanForCronJob(String basePackage) {
+//
+//        Reflections reflections = new Reflections(basePackage);
+//        Set<Class<?>> cronJobs = reflections.getTypesAnnotatedWith(CronJob.class);
+//        Set<String> cronJobsSet = new HashSet<>();
+//        for (Class<?> annotatedClass : cronJobs) {
+//            cronJobsSet.add(annotatedClass.getName());
+//        }
+//        return cronJobsSet;
+//    }
 
     /**
      * Find All Jobs that are annotated with SimpleJob
      *
-     * @param basePackage For scanning the annotation, you have to provide Basepackage
+     * @param jobType For scanning the annotation, you have to provide Basepackage
      * @return {@link Set<String>}
      */
 
     @Override
-    public Set<String> getAllBeanForSimpleJob(String basePackage) {
-        Reflections reflections = new Reflections(basePackage);
-        Set<Class<?>> simpleJobs = reflections.getTypesAnnotatedWith(SimpleJob.class);
+    public Set<String> getAllAnnotatedBeanByJobType(String jobType) {
+        if (Jobs.SIMPLE_JOB.getJobType().equals(jobType.toLowerCase())) {
+            Set<String> simpleJobsSet = getSimpleJobs();
+            return simpleJobsSet;
+        } else {
+            Set<String> cronJobsSet = getCronJobs();
+            return cronJobsSet;
+        }
+    }
+
+
+    /**
+     * @param basePackage For scanning the annotation, you have to provide Base-package
+     * @return {@link Set<String>}
+     */
+    @Override
+    public Set<String> getAllJobsByScanningAnnotation(String basePackage) {
+        //  Reflections reflections = new Reflections(basePackage);
+        Set<String> cronJobs = getCronJobs();
+        Set<String> simpleJobs = getSimpleJobs();
+        return mergeSet(cronJobs, simpleJobs);
+    }
+
+    /**
+     * it marge two set and return new set
+     *
+     * @param simpleJobs
+     * @param cronJobs
+     * @param <T>        Types of Data
+     * @return
+     */
+    private <T> Set<T> mergeSet(Set<T> simpleJobs, Set<T> cronJobs) {
+        return new HashSet<T>() {
+            {
+                addAll(simpleJobs);
+                addAll(cronJobs);
+            }
+        };
+    }
+
+    private Set<String> getCronJobs() {
+        Set<String> cronJobsSet = new HashSet<>();
+        Map<String, Object> aggregates = applicationContext.getBeansWithAnnotation(CronJob.class);
+        for (Object aggregate : aggregates.values()) {
+            String aggregateType = aggregate.getClass().getCanonicalName();
+            cronJobsSet.add(aggregateType);
+        }
+        return cronJobsSet;
+    }
+
+    private Set<String> getSimpleJobs() {
+//        Set<String> simpleJobsSet = new HashSet<>();
+//        Set<Class<?>> simpleJobs = reflections.getTypesAnnotatedWith(SimpleJob.class);
+//        for (Class<?> annotatedClass : simpleJobs) {
+//            simpleJobsSet.add(annotatedClass.getName());
+//        }
+//        return simpleJobsSet;
         Set<String> simpleJobsSet = new HashSet<>();
-        for (Class<?> annotatedClass : simpleJobs) {
-            simpleJobsSet.add(annotatedClass.getName());
+        Map<String, Object> aggregates = applicationContext.getBeansWithAnnotation(SimpleJob.class);
+        for (Object aggregate : aggregates.values()) {
+            String aggregateType = aggregate.getClass().getCanonicalName();
+            simpleJobsSet.add(aggregateType);
         }
         return simpleJobsSet;
     }
 
     /**
-     * @param basePackage For scanning the annotation, you have to provide Basepackage
-     * @return {@link Set<String>}
-     */
-    @Override
-    public Set<String> getAllJobsByScanningAnnotation(String basePackage) {
-        Reflections reflections = new Reflections(basePackage);
-        Set<Class<?>> cronJobs = reflections.getTypesAnnotatedWith(CronJob.class);
-        Set<Class<?>> simpleJobs = reflections.getTypesAnnotatedWith(SimpleJob.class);
-        Set<String> allJobs = new HashSet<>();
-        for (Class<?> annotatedClass : cronJobs) {
-            allJobs.add(annotatedClass.getName());
-        }
-        for (Class<?> annotatedClass : simpleJobs) {
-            allJobs.add(annotatedClass.getName());
-        }
-        return allJobs;
-    }
-
-    /**
-     * @param basePackage For scanning the annotation, you have to provide Basepackage
+     * @param basePackage For scanning the annotation, you have to provide Base-package
      */
     public void createJobForAnnotatedBean(String basePackage) {
         Reflections reflections = new Reflections(basePackage);

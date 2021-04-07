@@ -1,7 +1,7 @@
 package com.quartzadvance.controller;
 
 import com.quartzadvance.entity.SchedulerJobInfo;
-import com.quartzadvance.jobs.SimpleJob;
+import com.quartzadvance.jobs.EmailJob;
 import com.quartzadvance.repository.SchedulerRepository;
 import com.quartzadvance.service.SchedulerService;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,7 @@ public class QuartzController {
         SchedulerJobInfo schedulerJobInfo = new SchedulerJobInfo();
         schedulerJobInfo.setRepeatTime(1000L);
         schedulerJobInfo.setJobName("email send");
-        schedulerJobInfo.setJobClass(SimpleJob.class.getName());
+        schedulerJobInfo.setJobClass(EmailJob.class.getName());
         // schedulerJobInfo.setTotalFireCount(10);
         schedulerJobInfo.setRunForever(true);
         schedulerJobInfo.setJobGroup("Test Job3");

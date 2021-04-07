@@ -135,13 +135,13 @@ public interface SchedulerService {
      */
     void createJobForAnnotatedBean(String basePackage);
 
-    /**
-     * Get all job which are annotated with @CronJob
-     *
-     * @param basePackage
-     * @return {@link Set<String>}
-     */
-    Set<String> getAllBeanForCronJob(String basePackage);
+//    /**
+//     * Get all job which are annotated with @CronJob
+//     *
+//     * @param basePackage
+//     * @return {@link Set<String>}
+//     */
+//    Set<String> getAllBeanForCronJob(String basePackage);
 
     /**
      * Get all job which are annotated with @SimpleJob
@@ -149,7 +149,7 @@ public interface SchedulerService {
      * @param basePackage
      * @return {@link Set<String>}
      */
-    Set<String> getAllBeanForSimpleJob(String basePackage);
+    Set<String> getAllAnnotatedBeanByJobType(String jobType);
 
     /**
      * Get aLl jobs which are annotated with @SimpleJob or @CronJob

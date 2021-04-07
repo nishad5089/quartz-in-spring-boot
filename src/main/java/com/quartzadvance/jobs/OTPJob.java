@@ -13,10 +13,10 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
  */
 @Slf4j
 @DisallowConcurrentExecution
-@CronJob(jobName = "OTP SMS", jobGroup = "SMS", cronExpression = "* * * ? * *")
+//@CronJob(jobName = "OTP SMS", jobGroup = "SMS", cronExpression = "* * * ? * *")
 //@CronJob(job = @Job(jobName = "Email", jobGroup = "SMS"), cronExpression = "* * * ? * *")
-//@CronJob
-public class SampleCronJob extends QuartzJobBean implements InterruptableJob {
+@CronJob
+public class OTPJob extends QuartzJobBean implements InterruptableJob {
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
         log.info("SampleCronJob Start................");

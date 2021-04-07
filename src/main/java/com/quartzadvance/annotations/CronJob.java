@@ -2,6 +2,8 @@ package com.quartzadvance.annotations;
 
 import org.quartz.CronTrigger;
 import org.quartz.SimpleTrigger;
+import org.springframework.core.annotation.AliasFor;
+import org.springframework.stereotype.Component;
 
 import java.lang.annotation.*;
 
@@ -13,6 +15,7 @@ import java.lang.annotation.*;
 @Documented
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
+@Component
 public @interface CronJob {
 
     String jobName() default "";
@@ -23,7 +26,7 @@ public @interface CronJob {
 
     boolean cronJob() default true;
 
-   // Job job();
+    // Job job();
 
     long initialOffsetMs() default 1000L;
 

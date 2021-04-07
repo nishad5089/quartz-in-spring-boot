@@ -1,27 +1,44 @@
 package com.quartzadvance;
 
-import com.quartzadvance.jobs.SimpleJob;
+import com.quartzadvance.annotations.CronJob;
+import com.quartzadvance.annotations.SimpleJob;
 import com.quartzadvance.service.SchedulerService;
-import javassist.ClassPath;
 import lombok.extern.slf4j.Slf4j;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
+import org.springframework.core.type.filter.AnnotationTypeFilter;
+import org.springframework.core.type.filter.TypeFilter;
+import org.springframework.stereotype.Service;
+
+import java.lang.annotation.Annotation;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Set;
 
 @SpringBootApplication
 @Slf4j
 public class Application {
-
-  //  private static SchedulerService schedulerService;
-
-//    public Application(SchedulerService schedulerService) {
-//        this.schedulerService = schedulerService;
-//    }
+    private static final Logger LOG = LoggerFactory.getLogger(Application.class);
+    private static SchedulerService schedulerService;
+    private static ApplicationContext applicationContext;
+    public Application(SchedulerService schedulerService, ApplicationContext applicationContext) {
+        this.schedulerService = schedulerService;
+        this.applicationContext = applicationContext;
+    }
 
     public static void main(String[] args) {
 
-        SpringApplication.run(Application.class, args);
+      SpringApplication.run(Application.class, args);
 
+        Map<String,Object> aggregates = applicationContext.getBeansWithAnnotation(CronJob.class);
+       // Arrays.stream(context.getBeansWithAnnotation(SimpleJob.class)).forEach(LOG::info);
 //        Reflections reflections = new Reflections("com.quartzadvance.jobs");
 //        Set<Class<?>> cronJobs = reflections.getTypesAnnotatedWith(CronJob.class);
 //        Set<Class<?>> simpleJobs = reflections.getTypesAnnotatedWith(SimpleJob.class);
@@ -68,13 +85,16 @@ public class Application {
 //            System.out.println(info);
 //            schedulerService.createNewJob(info);
 //        }
-        String str = SimpleJob.class.getName();
-        System.out.println(str);
-        System.out.println("===================");
-       // System.out.println(schedulerService.getAllBeanForCronJob("com.quartzadvance.jobs"));
-       // System.out.println(schedulerService.getPackage("com.quartzadvance.jobs.SimpleJob"));
 
-
-      //  schedulerService.createJobForAnnotatedBean("com.quartzadvance.jobs");
+//        System.out.println("==========");
+//        for (Object aggregate : aggregates.values()) {
+//            System.out.println("==========");
+//            String aggregateType = aggregate.getClass().getCanonicalName();
+//            String d = aggregate.getClass().getPackageName();
+//            System.out.println(d);
+//            System.out.println(aggregateType);
+//        }
+        System.out.println(schedulerService.getAllAnnotatedBeanByJobType("simpleJob"));
+//        System.out.println(schedulerService.getAllJobsByScanningAnnotation("com.quartzadvance.jobs"));
     }
 }
