@@ -1,25 +1,22 @@
 package com.quartzadvance.service.impl;
 
+import com.quartzadvance.Enums.Jobs;
 import com.quartzadvance.annotations.CronJob;
 import com.quartzadvance.annotations.SimpleJob;
-import com.quartzadvance.utils.JobScheduleCreator;
 import com.quartzadvance.entity.SchedulerJobInfo;
 import com.quartzadvance.repository.SchedulerRepository;
 import com.quartzadvance.service.SchedulerService;
+import com.quartzadvance.utils.JobScheduleCreator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
 import org.quartz.impl.matchers.GroupMatcher;
 import org.reflections.Reflections;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 
 import java.lang.annotation.Annotation;
 import java.util.*;
@@ -77,7 +74,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             SchedulerJobInfo info = schedulerRepository.findByJobName(jobInfo.getJobName());
             if (info != null) {
                 log.info("This Job Already Exists in Database");
-                jobInfo = info;
+                //  jobInfo = info;
             }
             Scheduler scheduler = schedulerFactoryBean.getScheduler();
 
@@ -396,6 +393,7 @@ public class SchedulerServiceImpl implements SchedulerService {
      */
     @Override
     public Set<String> getAllBeanForCronJob(String basePackage) {
+
         Reflections reflections = new Reflections(basePackage);
         Set<Class<?>> cronJobs = reflections.getTypesAnnotatedWith(CronJob.class);
         Set<String> cronJobsSet = new HashSet<>();
@@ -418,7 +416,7 @@ public class SchedulerServiceImpl implements SchedulerService {
         Set<Class<?>> simpleJobs = reflections.getTypesAnnotatedWith(SimpleJob.class);
         Set<String> simpleJobsSet = new HashSet<>();
         for (Class<?> annotatedClass : simpleJobs) {
-            simpleJobsSet.add(annotatedClass.getSimpleName());
+            simpleJobsSet.add(annotatedClass.getName());
         }
         return simpleJobsSet;
     }
@@ -433,10 +431,10 @@ public class SchedulerServiceImpl implements SchedulerService {
         Set<Class<?>> cronJobs = reflections.getTypesAnnotatedWith(CronJob.class);
         Set<Class<?>> simpleJobs = reflections.getTypesAnnotatedWith(SimpleJob.class);
         Set<String> allJobs = new HashSet<>();
-        for (Class<?> annotatedClass : simpleJobs) {
+        for (Class<?> annotatedClass : cronJobs) {
             allJobs.add(annotatedClass.getName());
         }
-        for (Class<?> annotatedClass : cronJobs) {
+        for (Class<?> annotatedClass : simpleJobs) {
             allJobs.add(annotatedClass.getName());
         }
         return allJobs;
