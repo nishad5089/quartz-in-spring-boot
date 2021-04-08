@@ -1,5 +1,6 @@
 package com.quartzadvance.service.impl;
 
+import com.google.common.base.CaseFormat;
 import com.quartzadvance.Enums.Jobs;
 import com.quartzadvance.annotations.CronJob;
 import com.quartzadvance.annotations.SimpleJob;
@@ -7,13 +8,11 @@ import com.quartzadvance.entity.SchedulerJobInfo;
 import com.quartzadvance.repository.SchedulerRepository;
 import com.quartzadvance.service.SchedulerService;
 import com.quartzadvance.utils.JobScheduleCreator;
+import com.quartzadvance.utils.SchedulerHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.quartz.*;
 import org.quartz.impl.matchers.GroupMatcher;
-import org.reflections.Reflections;
-import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.quartz.QuartzJobBean;
@@ -43,6 +42,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     private final ApplicationContext applicationContext;
 
+
     /**
      * It start All the job schedulers that in the database amd it store job into jobstore temporarily
      */
@@ -55,8 +55,9 @@ public class SchedulerServiceImpl implements SchedulerService {
                 try {
                     JobDetail jobDetail = JobBuilder.newJob((Class<? extends QuartzJobBean>) Class.forName(jobInfo.getJobClass()))
                             .withIdentity(jobInfo.getJobName(), jobInfo.getJobGroup()).build();
+                //   JobDetail jobDetail =  schedulerFactoryBean.getScheduler().getJobDetail(new JobKey(jobInfo.getJobName(),jobInfo.getJobGroup()));
                     if (!scheduler.checkExists(jobDetail.getKey())) {
-                        this.configureSchedule(jobInfo, scheduler, jobDetail);
+                        this.configureSchedule(jobInfo, scheduler);
                     }
                     log.info("Job already exist");
                 } catch (ClassNotFoundException e) {
@@ -87,7 +88,7 @@ public class SchedulerServiceImpl implements SchedulerService {
                     .withIdentity(jobInfo.getJobName(), jobInfo.getJobGroup())
                     .build();
             if (!scheduler.checkExists(jobDetail.getKey())) {
-                this.configureSchedule(jobInfo, scheduler, jobDetail);
+                this.configureSchedule(jobInfo, scheduler);
                 schedulerRepository.save(jobInfo);
             } else {
                 log.error("scheduleNewJobRequest.jobAlreadyExist");
@@ -282,7 +283,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             JobDetail jobDetail = JobBuilder.newJob((Class<? extends QuartzJobBean>) Class.forName(jobInfo.getJobClass()))
                     .withIdentity(jobInfo.getJobName(), jobInfo.getJobGroup()).build();
             if (!scheduler.checkExists(jobDetail.getKey())) {
-                configureSchedule(jobInfo, scheduler, jobDetail);
+                configureSchedule(jobInfo, scheduler);
                 return true;
             } else {
                 log.error("scheduleNewJobRequest.jobAlreadyExist");
@@ -465,42 +466,42 @@ public class SchedulerServiceImpl implements SchedulerService {
     public Set<String> getAllJobsByScanningAnnotation() {
         Set<String> cronJobs = getCronJobs();
         Set<String> simpleJobs = getSimpleJobs();
-        return mergeSet(cronJobs, simpleJobs);
+        return SchedulerHelper.mergeSet(cronJobs, simpleJobs);
     }
 
     /**
-     * it marge two set and return new set
+     * Get Full Class Path from given BeanName
      *
-     * @param simpleJobs
-     * @param cronJobs
-     * @param <T>        Types of Data
+     * @param beanName Name of bean which class path need to find
      * @return
      */
-    private <T> Set<T> mergeSet(Set<T> simpleJobs, Set<T> cronJobs) {
-        return new HashSet<T>() {
-            {
-                addAll(simpleJobs);
-                addAll(cronJobs);
-            }
-        };
+    @Override
+    public String getFullClassPathOfBean(String beanName) {
+        String str = CaseFormat.UPPER_CAMEL.converterTo(CaseFormat.LOWER_CAMEL).convert(beanName);
+        return applicationContext.getBean(str).getClass().getCanonicalName();
     }
 
     private Set<String> getCronJobs() {
         Set<String> cronJobsSet = new HashSet<>();
         Map<String, Object> cronJobs = applicationContext.getBeansWithAnnotation(CronJob.class);
         for (Object cronJob : cronJobs.values()) {
-            String aggregateType = cronJob.getClass().getCanonicalName();
-            cronJobsSet.add(aggregateType);
+            String cronJobName = cronJob.getClass().getCanonicalName();
+            cronJobsSet.add(cronJobName);
         }
         return cronJobsSet;
     }
 
+    /**
+     * Get All Simple Job Annotated Bean
+     *
+     * @return {@link Set<String>}
+     */
     private Set<String> getSimpleJobs() {
         Set<String> simpleJobsSet = new HashSet<>();
         Map<String, Object> simpleJobs = applicationContext.getBeansWithAnnotation(SimpleJob.class);
         for (Object simpleJob : simpleJobs.values()) {
-            String aggregateType = simpleJob.getClass().getCanonicalName();
-            simpleJobsSet.add(aggregateType);
+            String simpleJobName = simpleJob.getClass().getSimpleName();
+            simpleJobsSet.add(simpleJobName);
         }
         return simpleJobsSet;
     }
@@ -510,12 +511,11 @@ public class SchedulerServiceImpl implements SchedulerService {
      *
      * @param jobInfo   it represents Job scheduling information(Ex: timingInfo, JobName, jobGroup etc).
      * @param scheduler it tell quartz to schedule the job using specific trigger
-     * @param jobDetail Quartz does not store an actual instance of a Job class, but instead allows you to define an instance of one, through the use of a JobDetail.
      * @throws ClassNotFoundException
      * @throws SchedulerException
      */
-    private void configureSchedule(SchedulerJobInfo jobInfo, Scheduler scheduler, JobDetail jobDetail) throws ClassNotFoundException, SchedulerException {
-        jobDetail = scheduleCreator.createJob(jobInfo);
+    private void configureSchedule(SchedulerJobInfo jobInfo, Scheduler scheduler) throws ClassNotFoundException, SchedulerException {
+        JobDetail jobDetail = scheduleCreator.createJob(jobInfo);
         Trigger trigger = configureTrigger(jobInfo);
         log.info("Starting Job.....");
         scheduler.scheduleJob(jobDetail, trigger);

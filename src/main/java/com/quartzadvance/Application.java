@@ -1,7 +1,9 @@
 package com.quartzadvance;
 
+import com.google.common.base.CaseFormat;
 import com.quartzadvance.annotations.CronJob;
 import com.quartzadvance.annotations.SimpleJob;
+import com.quartzadvance.jobs.EmailJob;
 import com.quartzadvance.service.SchedulerService;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -94,7 +96,10 @@ public class Application {
 //            System.out.println(d);
 //            System.out.println(aggregateType);
 //        }
-        System.out.println(schedulerService.getAllAnnotatedBeanByJobType("simpleJob"));
+       // System.out.println(schedulerService.getAllAnnotatedBeanByJobType("simpleJob"));
+       // System.out.println(schedulerService.getFullClassPathOfBean("EmailJob"));
+      //  System.out.println(EmailJob.class.getName());
+      //  System.out.println(s);
 //        System.out.println(schedulerService.getAllJobsByScanningAnnotation("com.quartzadvance.jobs"));
     }
 }

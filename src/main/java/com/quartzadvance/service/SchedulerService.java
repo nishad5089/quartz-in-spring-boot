@@ -148,4 +148,6 @@ public interface SchedulerService {
      */
     Set<String> getAllJobsByScanningAnnotation();
 
+    String getFullClassPathOfBean(String beanName);
+
 }

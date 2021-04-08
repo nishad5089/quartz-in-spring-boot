@@ -2,10 +2,12 @@ package com.quartzadvance.utils;
 
 import com.quartzadvance.entity.SchedulerJobInfo;
 import lombok.extern.slf4j.Slf4j;
+
 import org.quartz.CronTrigger;
 import org.quartz.JobDataMap;
 import org.quartz.JobDetail;
 import org.quartz.SimpleTrigger;
+import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.quartz.*;
 import org.springframework.stereotype.Component;
 

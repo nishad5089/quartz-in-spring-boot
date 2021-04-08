@@ -5,6 +5,7 @@ import com.quartzadvance.annotations.CronJob;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
 import org.springframework.scheduling.quartz.QuartzJobBean;
+import org.springframework.stereotype.Component;
 
 
 /**
@@ -16,6 +17,7 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
 //@CronJob(jobName = "OTP SMS", jobGroup = "SMS", cronExpression = "* * * ? * *")
 //@CronJob(job = @Job(jobName = "Email", jobGroup = "SMS"), cronExpression = "* * * ? * *")
 @CronJob
+@Component("oTPJob")
 public class OTPJob extends QuartzJobBean implements InterruptableJob {
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {

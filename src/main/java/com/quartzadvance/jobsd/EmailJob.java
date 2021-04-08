@@ -7,5 +7,5 @@ import com.quartzadvance.annotations.SimpleJob;
  * @since 2021/07/04
  */
 @SimpleJob
-public class EmailJob1 {
+public class EmailJob {
 }
